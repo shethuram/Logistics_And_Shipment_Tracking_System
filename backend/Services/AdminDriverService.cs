@@ -51,6 +51,9 @@ public class AdminDriverService : IAdminDriverService
     {
         var driver = await GetOrThrowAsync(id);
 
+        if (driver.ApprovalStatus != ApprovalStatus.PENDING)
+            throw new BusinessRuleException("Only pending drivers can be rejected.");
+
         driver.ApprovalStatus = ApprovalStatus.REJECTED;
         driver.ApprovalReason = request.Reason;
 
@@ -62,6 +65,9 @@ public class AdminDriverService : IAdminDriverService
     public async Task<DriverApprovalResponse> SuspendDriverAsync(Guid id, SuspendDriverRequest request)
     {
         var driver = await GetOrThrowAsync(id);
+
+        if (driver.ApprovalStatus != ApprovalStatus.APPROVED)
+            throw new BusinessRuleException("Only approved drivers can be suspended.");
 
         driver.ApprovalStatus = ApprovalStatus.SUSPENDED;
         driver.ApprovalReason = request.Reason;

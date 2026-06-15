@@ -1,0 +1,1042 @@
+{
+  "info": {
+    "_postman_id": "f5b722df-77d0-4d5f-9cf0-ea8bf89f1d24",
+    "name": "Logistics & Shipment Tracking System API",
+    "description": "=== WHO TO USE FOR WHAT ===\n\n🔵 ADMIN TOKEN → Folder 2 (Admin Actions), Folder 7 (Metrics/Dashboard), Admin Disputes\n   Real user: admin@example.com | DB id: 64ac5abd-ecef-4092-958a-17f30dc5f66b\n   Switch: set access_token = {{admin_token}}\n\n🟢 CUSTOMER TOKEN → Folder 4 (Shipment Booking), Folder 6 (Raise Dispute), Folder 9 (Notifications)\n   Real user: arjun.customer@example.com | DB id: 9340ef1a-7063-43cf-a9af-2bddf4df6a0a\n   Switch: set access_token = {{customer_token}}\n\n🟡 DRIVER TOKEN → Folder 3 (Driver Setup), Folder 5 (Claims & Delivery Flow)\n   Real user: ravi.driver@example.com | DB id: 94f53dd1-a079-44d4-96d3-7a9a97553e02\n   Switch: set access_token = {{driver_token}}\n\n⚪ NO TOKEN → Folder 8 (Public Tracking) — no auth needed\n\n🗄️ FAKE DATA (seed script) → Used for visual demo only. These users have no tokens.\n   Fake drivers (pending approval): Muthu Kumar, Selvam Raja\n   Fake shipments: Various statuses visible in admin dashboard\n   Fake disputes: Pre-seeded for admin to resolve\n\n=== DEMO FLOW ORDER ===\n1. Admin: Get Pending Drivers → Approve one → Reject one\n2. Driver: Add Vehicle → Set Active → Go Online\n3. Customer: Create Shipment (COD) → note the shipmentId and senderOtp\n4. Driver: Get Available Jobs → Claim Job\n5. Driver: Confirm Pickup (enter senderOtp from step 3)\n6. Driver: Send GPS Pings (x3)\n7. Customer/Admin: Get Live Coordinates\n8. Driver: Confirm Delivery (enter receiverOtp from public track)\n9. Driver: Confirm Cash Collected\n10. Public: Track Order (no token)\n11. Customer: Raise Dispute\n12. Admin: List Disputes → Resolve Dispute",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. Get Tokens (Auth0)",
+      "description": "Run each request once to get tokens. Copy access_token from response into the matching variable (customer_token, driver_token, admin_token).",
+      "item": [
+        {
+          "name": "Get Customer Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.access_token) {",
+                  "    pm.collectionVariables.set('customer_token', json.access_token);",
+                  "    pm.collectionVariables.set('access_token', json.access_token);",
+                  "    console.log('Customer token saved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{client_id}}\",\n  \"client_secret\": \"{{client_secret}}\",\n  \"audience\": \"{{audience}}\",\n  \"grant_type\": \"password\",\n  \"username\": \"arjun.customer@example.com\",\n  \"password\": \"{{user_password}}\",\n  \"scope\": \"openid profile email\"\n}"
+            },
+            "url": {
+              "raw": "https://{{auth0_domain}}/oauth/token",
+              "protocol": "https",
+              "host": ["{{auth0_domain}}"],
+              "path": ["oauth", "token"]
+            },
+            "description": "Auto-saves token to customer_token and sets access_token to customer. Run this before testing customer endpoints."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Driver Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.access_token) {",
+                  "    pm.collectionVariables.set('driver_token', json.access_token);",
+                  "    pm.collectionVariables.set('access_token', json.access_token);",
+                  "    console.log('Driver token saved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{client_id}}\",\n  \"client_secret\": \"{{client_secret}}\",\n  \"audience\": \"{{audience}}\",\n  \"grant_type\": \"password\",\n  \"username\": \"ravi.driver@example.com\",\n  \"password\": \"{{user_password}}\",\n  \"scope\": \"openid profile email\"\n}"
+            },
+            "url": {
+              "raw": "https://{{auth0_domain}}/oauth/token",
+              "protocol": "https",
+              "host": ["{{auth0_domain}}"],
+              "path": ["oauth", "token"]
+            },
+            "description": "Auto-saves token to driver_token and switches access_token to driver. Run before driver endpoint tests."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Admin Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.access_token) {",
+                  "    pm.collectionVariables.set('admin_token', json.access_token);",
+                  "    pm.collectionVariables.set('access_token', json.access_token);",
+                  "    console.log('Admin token saved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{client_id}}\",\n  \"client_secret\": \"{{client_secret}}\",\n  \"audience\": \"{{audience}}\",\n  \"grant_type\": \"password\",\n  \"username\": \"admin@example.com\",\n  \"password\": \"{{user_password}}\",\n  \"scope\": \"openid profile email\"\n}"
+            },
+            "url": {
+              "raw": "https://{{auth0_domain}}/oauth/token",
+              "protocol": "https",
+              "host": ["{{auth0_domain}}"],
+              "path": ["oauth", "token"]
+            },
+            "description": "Auto-saves token to admin_token and switches access_token to admin. Run before admin endpoint tests."
+          },
+          "response": []
+        },
+        {
+          "name": "→ Switch to Customer Token",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('customer_token'));",
+                  "console.log('Switched to CUSTOMER token');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/shipments?page=1&pageSize=1", "host": ["{{baseUrl}}"], "path": ["api","shipments"], "query": [{"key":"page","value":"1"},{"key":"pageSize","value":"1"}] },
+            "description": "Run this to switch active token to CUSTOMER before customer API calls. Just a helper — ignore the response."
+          },
+          "response": []
+        },
+        {
+          "name": "→ Switch to Driver Token",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('driver_token'));",
+                  "console.log('Switched to DRIVER token');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/shipments/available", "host": ["{{baseUrl}}"], "path": ["api","shipments","available"] },
+            "description": "Run this to switch active token to DRIVER before driver API calls."
+          },
+          "response": []
+        },
+        {
+          "name": "→ Switch to Admin Token",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('admin_token'));",
+                  "console.log('Switched to ADMIN token');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/admin/metrics", "host": ["{{baseUrl}}"], "path": ["api","admin","metrics"] },
+            "description": "Run this to switch active token to ADMIN before admin API calls."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1. Auth & Onboarding",
+      "description": "No token needed. These create DB profiles for Auth0 users.",
+      "item": [
+        {
+          "name": "Register Customer Profile (arjun)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.id) {",
+                  "    pm.collectionVariables.set('customerId', json.id);",
+                  "    console.log('Customer ID saved: ' + json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"auth0Id\": \"auth0|6a2f6682e0bbb114568aa169\",\n  \"fullName\": \"Arjun Kumar\",\n  \"email\": \"arjun.customer@example.com\",\n  \"phone\": \"9876543210\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register/customer", "host": ["{{baseUrl}}"], "path": ["api","auth","register","customer"] },
+            "description": "Creates customer profile in DB. Already done if seeded. Run once only."
+          },
+          "response": []
+        },
+        {
+          "name": "Register Driver Profile (ravi)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.id) {",
+                  "    pm.collectionVariables.set('driverUserId', json.id);",
+                  "    console.log('Driver user ID saved: ' + json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"auth0Id\": \"auth0|6a2f6884fc9e0f7ed9007a02\",\n  \"fullName\": \"Ravi Shankar\",\n  \"email\": \"ravi.driver@example.com\",\n  \"phone\": \"9123456789\",\n  \"licenseNumber\": \"TN33-2023-00099\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register/driver", "host": ["{{baseUrl}}"], "path": ["api","auth","register","driver"] },
+            "description": "Creates driver profile in DB with PENDING status. Run once only."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Admin — Driver Approvals",
+      "description": "🔵 USE ADMIN TOKEN\nRun '→ Switch to Admin Token' first.\n\nFake pending drivers (from seed script) available for demo:\n- Muthu Kumar (bbbbbbbb-0001-0000-0000-000000000001) → APPROVE this one\n- Selvam Raja (bbbbbbbb-0002-0000-0000-000000000002) → REJECT this one\n- Karthik S (bbbbbbbb-0003-0000-0000-000000000003) → already REJECTED\n- Vijay Anand (bbbbbbbb-0004-0000-0000-000000000004) → already APPROVED\n\nReal driver (Ravi) → approve via driverId variable after registering.",
+      "item": [
+        {
+          "name": "Get Pending Drivers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/drivers/pending?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","admin","drivers","pending"],
+              "query": [{"key":"page","value":"1"},{"key":"pageSize","value":"20"}]
+            },
+            "description": "Shows all PENDING drivers. Should show Muthu and Selvam from seed data."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Driver (fake — Muthu)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/drivers/bbbbbbbb-0001-0000-0000-000000000001/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","admin","drivers","bbbbbbbb-0001-0000-0000-000000000001","approve"]
+            },
+            "description": "Approves Muthu Kumar (fake driver from seed). Good for demo."
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Driver (fake — Selvam)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"License document is expired or illegible.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/drivers/bbbbbbbb-0002-0000-0000-000000000002/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","admin","drivers","bbbbbbbb-0002-0000-0000-000000000002","reject"]
+            },
+            "description": "Rejects Selvam Raja (fake driver from seed). Good for demo."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Real Driver (ravi) — use driverId var",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/drivers/{{driverId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","admin","drivers","{{driverId}}","approve"]
+            },
+            "description": "Approves real Ravi driver. Set driverId variable to Ravi's driver profile ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Suspend Driver (fake — Vijay)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"High cancellation rate — 2 cancellations recorded.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/drivers/bbbbbbbb-0004-0000-0000-000000000004/suspend",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","admin","drivers","bbbbbbbb-0004-0000-0000-000000000004","suspend"]
+            },
+            "description": "Suspends Vijay Anand (fake — already has cancel_count=2 in seed). Good for demonstrating suspension."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Driver Setup (real — ravi)",
+      "description": "🟡 USE DRIVER TOKEN\nRun '→ Switch to Driver Token' first.\n\nAll requests use real Ravi driver.\nSet driverId = 88888888-8888-8888-8888-888888888888\nAfter adding vehicle, copy vehicleId from response.",
+      "item": [
+        {
+          "name": "Add Vehicle (TWO_WHEELER)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.id) {",
+                  "    pm.collectionVariables.set('vehicleId', json.id);",
+                  "    console.log('Vehicle ID saved: ' + json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleType\": \"TWO_WHEELER\",\n  \"vehicleNumber\": \"TN33AB9999\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/drivers/{{driverId}}/vehicles",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","drivers","{{driverId}}","vehicles"]
+            },
+            "description": "Auto-saves vehicleId to variable."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Driver Vehicles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/drivers/{{driverId}}/vehicles",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","drivers","{{driverId}}","vehicles"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Set Active Vehicle",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/drivers/{{driverId}}/vehicles/{{vehicleId}}/set-active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","drivers","{{driverId}}","vehicles","{{vehicleId}}","set-active"]
+            },
+            "description": "Sets the vehicle added above as active. Required before going online and seeing jobs."
+          },
+          "response": []
+        },
+        {
+          "name": "Go Online",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 11.664300,\n  \"longitude\": 78.146000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/drivers/{{driverId}}/go-online",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","drivers","{{driverId}}","go-online"]
+            },
+            "description": "Driver goes online near Salem Junction. Now visible in job feed for eligible shipments."
+          },
+          "response": []
+        },
+        {
+          "name": "Go Offline",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/drivers/{{driverId}}/go-offline",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","drivers","{{driverId}}","go-offline"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Customer — Shipment Booking (real — arjun)",
+      "description": "🟢 USE CUSTOMER TOKEN\nRun '→ Switch to Customer Token' first.\n\nAll requests use real Arjun customer.\nCustomer DB id: 9340ef1a-7063-43cf-a9af-2bddf4df6a0a\n\nAfter creating shipment:\n- Copy shipmentId from response\n- Copy senderOtp from response (shown only once!)\n- Note the orderId for public tracking test",
+      "item": [
+        {
+          "name": "Create Shipment — COD (recommended for demo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.id) {",
+                  "    pm.collectionVariables.set('shipmentId', json.id);",
+                  "    console.log('Shipment ID saved: ' + json.id);",
+                  "}",
+                  "if (json.orderId) {",
+                  "    pm.collectionVariables.set('orderId', json.orderId);",
+                  "    console.log('Order ID saved: ' + json.orderId);",
+                  "}",
+                  "if (json.senderOtp) {",
+                  "    pm.collectionVariables.set('senderOtp', json.senderOtp);",
+                  "    console.log('SAVE THIS SENDER OTP: ' + json.senderOtp);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pickupAddress\": \"Salem Junction Railway Station, Salem\",\n  \"pickupLat\": 11.664300,\n  \"pickupLng\": 78.146000,\n  \"dropAddress\": \"Big Bazaar, Salem\",\n  \"dropLat\": 11.675000,\n  \"dropLng\": 78.156000,\n  \"receiverName\": \"Priya Sundar\",\n  \"receiverPhone\": \"9988776655\",\n  \"packageType\": \"SMALL_PARCEL\",\n  \"weightKg\": 3.5,\n  \"preferredWindow\": \"EVENING\",\n  \"specialNotes\": \"Please deliver after 5 PM. Leave with security if not home.\",\n  \"paymentMethod\": \"COD\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","shipments"]
+            },
+            "description": "COD → status immediately OPEN. shipmentId, orderId, senderOtp auto-saved to variables. NOTE THE SENDER OTP — you need it for confirm-pickup."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Shipment Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","shipments","{{shipmentId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Shipment (before assigned)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"preferredWindow\": \"MORNING\",\n  \"specialNotes\": \"Updated: deliver before 10 AM.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","shipments","{{shipmentId}}"]
+            },
+            "description": "Only works when status is OPEN or PENDING_PAYMENT."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Shipments (with filter)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments?search=&status=&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","shipments"],
+              "query": [
+                {"key":"search","value":""},
+                {"key":"status","value":""},
+                {"key":"page","value":"1"},
+                {"key":"pageSize","value":"20"}
+              ]
+            },
+            "description": "Returns only Arjun's shipments. Try status=DELIVERED or search=TRK- to demo filters."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Shipment",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","shipments","{{shipmentId}}"]
+            },
+            "description": "Only works before ASSIGNED. Creates a new shipment first if you want to demo this."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Driver — Claims & Delivery Flow (real — ravi)",
+      "description": "🟡 USE DRIVER TOKEN\nRun '→ Switch to Driver Token' first.\n\nThis is the main demo flow:\nGet Jobs → Claim → Confirm Pickup (senderOtp) → GPS Pings → Confirm Delivery (receiverOtp) → Cash Collected\n\nreceiverOtp: get it from Public Track endpoint (folder 8) after claiming.",
+      "item": [
+        {
+          "name": "Get Available Jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/available",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","shipments","available"]
+            },
+            "description": "Shows OPEN shipments eligible for Ravi's TWO_WHEELER. Sorted by distance to pickup. Should show the COD shipment created in folder 4."
+          },
+          "response": []
+        },
+        {
+          "name": "Claim Shipment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}/claim",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","shipments","{{shipmentId}}","claim"]
+            },
+            "description": "Claims the shipment. Uses FOR UPDATE SKIP LOCKED — concurrent claims handled. Status → ASSIGNED."
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Pickup (enter senderOtp)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otp\": \"{{senderOtp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}/confirm-pickup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","shipments","{{shipmentId}}","confirm-pickup"]
+            },
+            "description": "Uses senderOtp saved from shipment creation. Status → IN_TRANSIT. GPS simulation starts."
+          },
+          "response": []
+        },
+        {
+          "name": "GPS Ping 1 (near pickup)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipmentId\": \"{{shipmentId}}\",\n  \"latitude\": 11.666000,\n  \"longitude\": 78.148000\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/tracking/location", "host": ["{{baseUrl}}"], "path": ["api","tracking","location"] },
+            "description": "Simulates driver moving. Broadcasts to customer's live map via SignalR."
+          },
+          "response": []
+        },
+        {
+          "name": "GPS Ping 2 (midway)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipmentId\": \"{{shipmentId}}\",\n  \"latitude\": 11.669000,\n  \"longitude\": 78.151000\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/tracking/location", "host": ["{{baseUrl}}"], "path": ["api","tracking","location"] }
+          },
+          "response": []
+        },
+        {
+          "name": "GPS Ping 3 (near drop)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipmentId\": \"{{shipmentId}}\",\n  \"latitude\": 11.674000,\n  \"longitude\": 78.155000\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/tracking/location", "host": ["{{baseUrl}}"], "path": ["api","tracking","location"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Live Location (current position)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tracking/{{shipmentId}}/live",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","tracking","{{shipmentId}}","live"]
+            },
+            "description": "Returns latest driver ping. Customer calls this on page load before SignalR takes over."
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Delivery (enter receiverOtp + drop coords)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otp\": \"{{receiverOtp}}\",\n  \"driverLat\": 11.675000,\n  \"driverLng\": 78.156000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}/confirm-delivery",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","shipments","{{shipmentId}}","confirm-delivery"]
+            },
+            "description": "driverLat/Lng must be within 200m of drop (11.675, 78.156). Get receiverOtp from Public Track endpoint first. Status → DELIVERED."
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Cash Collected (COD)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}/cash-collected",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","shipments","{{shipmentId}}","cash-collected"]
+            },
+            "description": "Only works after DELIVERED status. Marks COD cash as collected."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Claim (before pickup)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Flat tyre — cannot proceed.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}/cancel-claim",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","shipments","{{shipmentId}}","cancel-claim"]
+            },
+            "description": "Only works before confirm-pickup (ASSIGNED status). Increments driver cancel_count. Job returns to OPEN."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Pickup Failed",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Sender not available at pickup location after 15 minutes.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}/pickup-failed",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","shipments","{{shipmentId}}","pickup-failed"]
+            },
+            "description": "Marks pickup as failed when sender is absent. Status → PICKUP_FAILED."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Disputes (customer raises, admin resolves)",
+      "description": "🟢 CUSTOMER TOKEN to raise dispute\n🔵 ADMIN TOKEN to list and resolve\n\nFake disputes already in DB from seed:\n- Delivered shipment dispute (wrong address)\n- Cancelled shipment dispute (escalated)\n\nTo demo LLM: raise a new dispute on a real shipment.",
+      "item": [
+        {
+          "name": "Raise Dispute (customer — arjun)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.id) {",
+                  "    pm.collectionVariables.set('disputeId', json.id);",
+                  "    console.log('Dispute ID saved: ' + json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipmentId\": \"{{shipmentId}}\",\n  \"complaintText\": \"Driver marked the package as delivered but I never received it. I was home all afternoon waiting.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/disputes", "host": ["{{baseUrl}}"], "path": ["api","disputes"] },
+            "description": "Switch to CUSTOMER token first. LLM will classify this as WRONG_ADDRESS and suggest resolution. disputeId auto-saved."
+          },
+          "response": []
+        },
+        {
+          "name": "List All Disputes (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/disputes?status=OPEN&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","admin","disputes"],
+              "query": [{"key":"status","value":"OPEN"},{"key":"page","value":"1"},{"key":"pageSize","value":"20"}]
+            },
+            "description": "Switch to ADMIN token first. Shows LLM summary, type, and suggested resolution for each dispute."
+          },
+          "response": []
+        },
+        {
+          "name": "Resolve Dispute (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"RESOLVED\",\n  \"resolutionNotes\": \"Verified GPS history. Driver delivered to wrong building. Refund initiated to customer.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/disputes/{{disputeId}}/resolve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","admin","disputes","{{disputeId}}","resolve"]
+            },
+            "description": "Switch to ADMIN token first. Resolves dispute and notifies customer."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. Admin Dashboard",
+      "description": "🔵 USE ADMIN TOKEN\nRun '→ Switch to Admin Token' first.\n\nAll shipments across all customers visible here.\nFake data from seed shows various statuses.",
+      "item": [
+        {
+          "name": "Get All Shipments (all statuses)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/shipments?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","admin","shipments"],
+              "query": [{"key":"page","value":"1"},{"key":"pageSize","value":"20"}]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Filter by Status — DELIVERED",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/shipments?status=DELIVERED&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","admin","shipments"],
+              "query": [{"key":"status","value":"DELIVERED"},{"key":"page","value":"1"},{"key":"pageSize","value":"20"}]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search by Order ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/shipments?search=TRK-&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","admin","shipments"],
+              "query": [{"key":"search","value":"TRK-"},{"key":"page","value":"1"},{"key":"pageSize","value":"20"}]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/admin/metrics", "host": ["{{baseUrl}}"], "path": ["api","admin","metrics"] },
+            "description": "Total shipments, delivered, pending, failed, cancelled, avg delivery time, drivers online."
+          },
+          "response": []
+        },
+        {
+          "name": "Force Reassign Stale Shipment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/shipments/{{shipmentId}}/reassign",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","admin","shipments","{{shipmentId}}","reassign"]
+            },
+            "description": "Resets stale/stuck shipment back to OPEN. Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Export Shipments CSV",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/export/shipments?status=DELIVERED",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","admin","export","shipments"],
+              "query": [{"key":"status","value":"DELIVERED"}]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get GPS History (admin only)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tracking/{{shipmentId}}/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","tracking","{{shipmentId}}","history"]
+            },
+            "description": "Full GPS trail for a shipment. Useful for dispute investigation."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "8. Public Tracking (no token)",
+      "description": "⚪ NO TOKEN NEEDED\nAnyone can call this. Rate limited: 10 requests/min per IP.\n\nUse orderId saved from shipment creation.\nphone = 9876543210 (arjun's phone)\ndate = today's date\n\nreceiverotp is returned here — copy it to {{receiverOtp}} variable before confirm-delivery.",
+      "item": [
+        {
+          "name": "Track Shipment (public)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.receiverOtp) {",
+                  "    pm.collectionVariables.set('receiverOtp', json.receiverOtp);",
+                  "    console.log('Receiver OTP saved: ' + json.receiverOtp);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/public/track?orderId={{orderId}}&phone=9876543210&date={{today}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","public","track"],
+              "query": [
+                {"key":"orderId","value":"{{orderId}}"},
+                {"key":"phone","value":"9876543210"},
+                {"key":"date","value":"{{today}}"}
+              ]
+            },
+            "description": "No token. Returns status timeline, driver location, and receiverOtp (auto-saved to variable). All 3 params must match exactly."
+          },
+          "response": []
+        },
+        {
+          "name": "Track Fake Delivered Shipment",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/public/track?orderId=TRK-20240101-00001&phone=9555555555&date=2024-01-01",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","public","track"],
+              "query": [
+                {"key":"orderId","value":"TRK-20240101-00001"},
+                {"key":"phone","value":"9555555555"},
+                {"key":"date","value":"2024-01-01"}
+              ]
+            },
+            "description": "Tracks fake DELIVERED shipment from seed data. Shows completed timeline."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "9. Notifications",
+      "description": "Switch token based on whose notifications you want:\n🟢 Customer token → arjun's notifications\n🟡 Driver token → ravi's notifications\n🔵 Admin token → admin notifications",
+      "item": [
+        {
+          "name": "Get My Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.length > 0) {",
+                  "    pm.collectionVariables.set('notificationId', json.data[0].id);",
+                  "    console.log('First notification ID saved: ' + json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/my?page=1&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","notifications","my"],
+              "query": [{"key":"page","value":"1"},{"key":"pageSize","value":"10"}]
+            },
+            "description": "Returns notifications for whoever's token is active. First notificationId auto-saved."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Notification Read",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/{{notificationId}}/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","notifications","{{notificationId}}","read"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Set today's date for public tracking",
+          "var today = new Date().toISOString().split('T')[0];",
+          "pm.collectionVariables.set('today', today);"
+        ],
+        "type": "text/javascript"
+      }
+    },
+    {
+      "listen": "test",
+      "script": { "exec": [""], "type": "text/javascript" }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5286", "type": "string" },
+    { "key": "auth0_domain", "value": "dev-bytoqvyodyra0w6k.us.auth0.com", "type": "string" },
+    { "key": "client_id", "value": "Ci3MbMMmBThPwWcidbdX02oJqT72ifIp", "type": "string" },
+    { "key": "client_secret", "value": "YOUR_CLIENT_SECRET_HERE", "type": "string" },
+    { "key": "audience", "value": "https://api.logistics-tracking.com", "type": "string" },
+    { "key": "user_password", "value": "Password123!", "type": "string" },
+    { "key": "customer_token", "value": "", "type": "string" },
+    { "key": "driver_token", "value": "", "type": "string" },
+    { "key": "admin_token", "value": "", "type": "string" },
+    { "key": "access_token", "value": "", "type": "string" },
+    { "key": "customerId", "value": "9340ef1a-7063-43cf-a9af-2bddf4df6a0a", "type": "string" },
+    { "key": "driverUserId", "value": "94f53dd1-a079-44d4-96d3-7a9a97553e02", "type": "string" },
+    { "key": "adminId", "value": "64ac5abd-ecef-4092-958a-17f30dc5f66b", "type": "string" },
+    { "key": "driverId", "value": "88888888-8888-8888-8888-888888888888", "type": "string" },
+    { "key": "vehicleId", "value": "", "type": "string" },
+    { "key": "shipmentId", "value": "", "type": "string" },
+    { "key": "orderId", "value": "", "type": "string" },
+    { "key": "senderOtp", "value": "", "type": "string" },
+    { "key": "receiverOtp", "value": "", "type": "string" },
+    { "key": "disputeId", "value": "", "type": "string" },
+    { "key": "notificationId", "value": "", "type": "string" },
+    { "key": "today", "value": "", "type": "string" }
+  ]
+}

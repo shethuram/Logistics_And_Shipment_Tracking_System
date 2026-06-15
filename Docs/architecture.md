@@ -24,7 +24,7 @@ An on-demand same-day logistics platform built on a layered architecture. The fr
                      │
 ┌────────────────────▼────────────────────────┐
 │              Service Layer                  │
-│         Business logic, FSM, OTP           │
+│         Business logic, FSM, OTP            │
 └────────────────────┬────────────────────────┘
                      │
 ┌────────────────────▼────────────────────────┐
