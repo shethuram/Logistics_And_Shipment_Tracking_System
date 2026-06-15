@@ -77,7 +77,7 @@ public class DisputeServiceTests : IDisposable
     {
         var customerId = Guid.NewGuid();
         var shipmentId = Guid.NewGuid();
-        var shipment = new Shipment { Id = shipmentId, CustomerId = Guid.NewGuid() }; // Different Customer
+        var shipment = new Shipment { Id = shipmentId, CustomerId = Guid.NewGuid() };
         _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
         var request = new RaiseDisputeRequest { ShipmentId = shipmentId, ComplaintText = "Text" };
@@ -100,7 +100,6 @@ public class DisputeServiceTests : IDisposable
 
         _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
-        // Add dispute directly to SQLite db to trigger direct exist block
         var existingDispute = new Dispute { Id = Guid.NewGuid(), ShipmentId = shipmentId, RaisedBy = customerId, ComplaintText = "First text" };
         _db.Disputes.Add(existingDispute);
         _db.SaveChanges();
@@ -216,7 +215,7 @@ public class DisputeServiceTests : IDisposable
         var disputeId = Guid.NewGuid();
         var dispute = new Dispute { Id = disputeId, Status = DisputeStatus.OPEN };
         _disputeRepoMock.Setup(r => r.GetByIdAsync(disputeId)).ReturnsAsync(dispute);
-        var request = new ResolveDisputeRequest { Status = "OPEN", ResolutionNotes = "Notes" }; // Status must be RESOLVED or ESCALATED
+        var request = new ResolveDisputeRequest { Status = "OPEN", ResolutionNotes = "Notes" };
 
         await Assert.ThrowsAsync<ValidationException>(() => 
             _service.ResolveDisputeAsync(disputeId, request, Guid.NewGuid(), "ADMIN"));

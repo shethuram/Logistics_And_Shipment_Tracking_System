@@ -30,13 +30,12 @@ public class NotificationServiceTests
         _clientsMock = new Mock<IHubClients>();
         _clientProxyMock = new Mock<IClientProxy>();
 
-        // Wire up SignalR Hub Context mock
         _hubContextMock.Setup(h => h.Clients).Returns(_clientsMock.Object);
         _clientsMock.Setup(c => c.Group(It.IsAny<string>())).Returns(_clientProxyMock.Object);
 
         _service = new NotificationService(
             _notificationRepoMock.Object,
-            null!, // AppDbContext is not used directly in NotificationService
+            null!,
             _hubContextMock.Object
         );
     }
@@ -166,7 +165,7 @@ public class NotificationServiceTests
     public async Task MarkAsReadAsync_NotAuthorizedUser_ThrowsForbiddenException()
     {
         var notifId = Guid.NewGuid();
-        var notification = new Notification { Id = notifId, UserId = Guid.NewGuid() }; // Other user
+        var notification = new Notification { Id = notifId, UserId = Guid.NewGuid() };
         _notificationRepoMock.Setup(r => r.GetByIdAsync(notifId)).ReturnsAsync(notification);
 
         await Assert.ThrowsAsync<ForbiddenException>(() => _service.MarkAsReadAsync(notifId, Guid.NewGuid()));

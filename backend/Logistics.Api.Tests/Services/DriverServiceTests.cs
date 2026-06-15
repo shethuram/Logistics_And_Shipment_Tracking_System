@@ -26,13 +26,12 @@ public class DriverServiceTests
     [Fact]
     public async Task GoOnlineAsync_DriverNotFound_ThrowsNotFoundException()
     {
-        // Arrange
+
         var driverId = Guid.NewGuid();
         _driverRepoMock.Setup(r => r.GetByIdAsync(driverId)).ReturnsAsync((Driver)null!);
 
         var request = new GoOnlineRequest { Latitude = 12.34m, Longitude = 56.78m };
 
-        // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => 
             _driverService.GoOnlineAsync(driverId, request));
     }
@@ -40,7 +39,7 @@ public class DriverServiceTests
     [Fact]
     public async Task GoOnlineAsync_DriverNotApproved_ThrowsBusinessRuleException()
     {
-        // Arrange
+
         var driverId = Guid.NewGuid();
         var driver = new Driver
         {
@@ -51,7 +50,6 @@ public class DriverServiceTests
 
         var request = new GoOnlineRequest { Latitude = 12.34m, Longitude = 56.78m };
 
-        // Act & Assert
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
             _driverService.GoOnlineAsync(driverId, request));
         Assert.Equal("Driver must be approved before going online.", ex.Message);
@@ -60,7 +58,7 @@ public class DriverServiceTests
     [Fact]
     public async Task GoOnlineAsync_NoActiveVehicleId_ThrowsValidationException()
     {
-        // Arrange
+
         var driverId = Guid.NewGuid();
         var driver = new Driver
         {
@@ -72,7 +70,6 @@ public class DriverServiceTests
 
         var request = new GoOnlineRequest { Latitude = 12.34m, Longitude = 56.78m };
 
-        // Act & Assert
         var ex = await Assert.ThrowsAsync<ValidationException>(() =>
             _driverService.GoOnlineAsync(driverId, request));
         Assert.Equal("Driver has no active vehicle set.", ex.Message);
@@ -81,7 +78,7 @@ public class DriverServiceTests
     [Fact]
     public async Task GoOnlineAsync_ActiveVehicleNotFound_ThrowsValidationException()
     {
-        // Arrange
+
         var driverId = Guid.NewGuid();
         var vehicleId = Guid.NewGuid();
         var driver = new Driver
@@ -95,7 +92,6 @@ public class DriverServiceTests
 
         var request = new GoOnlineRequest { Latitude = 12.34m, Longitude = 56.78m };
 
-        // Act & Assert
         var ex = await Assert.ThrowsAsync<ValidationException>(() =>
             _driverService.GoOnlineAsync(driverId, request));
         Assert.Equal("Driver has no active vehicle set.", ex.Message);
@@ -104,7 +100,7 @@ public class DriverServiceTests
     [Fact]
     public async Task GoOnlineAsync_ValidApprovedDriverAndVehicle_UpdatesStatusOnline()
     {
-        // Arrange
+
         var driverId = Guid.NewGuid();
         var vehicleId = Guid.NewGuid();
         var driver = new Driver
@@ -125,10 +121,8 @@ public class DriverServiceTests
 
         var request = new GoOnlineRequest { Latitude = 12.3456m, Longitude = 78.9012m };
 
-        // Act
         var result = await _driverService.GoOnlineAsync(driverId, request);
 
-        // Assert
         Assert.NotNull(result);
         Assert.Equal("ONLINE", result.OperationalStatus);
         Assert.Equal("FOUR_WHEELER", result.ActiveVehicleType);
@@ -144,11 +138,10 @@ public class DriverServiceTests
     [Fact]
     public async Task GoOfflineAsync_DriverNotFound_ThrowsNotFoundException()
     {
-        // Arrange
+
         var driverId = Guid.NewGuid();
         _driverRepoMock.Setup(r => r.GetByIdAsync(driverId)).ReturnsAsync((Driver)null!);
 
-        // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => 
             _driverService.GoOfflineAsync(driverId));
     }
@@ -156,7 +149,7 @@ public class DriverServiceTests
     [Fact]
     public async Task GoOfflineAsync_ValidDriver_UpdatesStatusOffline()
     {
-        // Arrange
+
         var driverId = Guid.NewGuid();
         var driver = new Driver
         {
@@ -165,10 +158,8 @@ public class DriverServiceTests
         };
         _driverRepoMock.Setup(r => r.GetByIdAsync(driverId)).ReturnsAsync(driver);
 
-        // Act
         var result = await _driverService.GoOfflineAsync(driverId);
 
-        // Assert
         Assert.NotNull(result);
         Assert.Equal("OFFLINE", result.OperationalStatus);
         Assert.Equal(OperationalStatus.OFFLINE, driver.OperationalStatus);

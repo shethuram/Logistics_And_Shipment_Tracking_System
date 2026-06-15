@@ -86,7 +86,7 @@ public class ShipmentServiceTests : IDisposable
     [Fact]
     public async Task CreateAsync_CodPayment_CreatesOpenShipmentAndBroadcastsJob()
     {
-        // Arrange
+
         var customerId = Guid.NewGuid();
         var request = new CreateShipmentRequest 
         { 
@@ -104,10 +104,8 @@ public class ShipmentServiceTests : IDisposable
         _otpServiceMock.Setup(o => o.GenerateOtp()).Returns("1234");
         _otpServiceMock.Setup(o => o.GenerateDeterministicOtp(It.IsAny<Guid>(), "receiver")).Returns("5678");
 
-        // Act
         var result = await _service.CreateAsync(request, customerId);
 
-        // Assert
         Assert.NotNull(result);
         Assert.Equal("OPEN", result.Status);
         Assert.Null(result.PaymentUrl);
@@ -120,7 +118,6 @@ public class ShipmentServiceTests : IDisposable
             s.DriverInstruction == "Careful Instruction"
         )), Times.Once);
 
-        // Notify customer + broadcast to eligible drivers (TWO_WHEELER, THREE_WHEELER)
         _notificationServiceMock.Verify(n => n.CreateNotificationAsync(customerId, It.IsAny<Guid>(), "Shipment Created", It.IsAny<string>()), Times.Once);
         _notificationServiceMock.Verify(n => n.BroadcastNewJobAlertAsync("TWO_WHEELER", It.IsAny<object>()), Times.Once);
         _notificationServiceMock.Verify(n => n.BroadcastNewJobAlertAsync("THREE_WHEELER", It.IsAny<object>()), Times.Once);
@@ -129,14 +126,12 @@ public class ShipmentServiceTests : IDisposable
     [Fact]
     public async Task CreateAsync_OnlinePayment_CreatesPendingPaymentShipment()
     {
-        // Arrange
+
         var request = new CreateShipmentRequest { PackageType = "SMALL_PARCEL", PaymentMethod = "ONLINE" };
         _otpServiceMock.Setup(o => o.GenerateOtp()).Returns("1234");
 
-        // Act
         var result = await _service.CreateAsync(request, Guid.NewGuid());
 
-        // Assert
         Assert.Equal("PENDING_PAYMENT", result.Status);
         Assert.NotNull(result.PaymentUrl);
     }
@@ -179,7 +174,7 @@ public class ShipmentServiceTests : IDisposable
     {
         var id = Guid.NewGuid();
         var customerId = Guid.NewGuid();
-        var shipment = new Shipment { Id = id, CustomerId = customerId, Status = ShipmentStatus.ASSIGNED }; // Only PENDING_PAYMENT or OPEN allowed
+        var shipment = new Shipment { Id = id, CustomerId = customerId, Status = ShipmentStatus.ASSIGNED };
         _shipmentRepoMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(shipment);
 
         var request = new UpdateShipmentRequest { SpecialNotes = "New Note" };
@@ -242,7 +237,6 @@ public class ShipmentServiceTests : IDisposable
         _driverRepoMock.Setup(r => r.GetByUserIdAsync(driverUserId)).ReturnsAsync(driver);
         _vehicleRepoMock.Setup(r => r.GetByIdAsync(driver.ActiveVehicleId.Value)).ReturnsAsync(new Vehicle());
 
-        // Driver already has active job
         _shipmentRepoMock.Setup(r => r.GetActiveShipmentForDriverAsync(driver.Id)).ReturnsAsync(new Shipment());
 
         await Assert.ThrowsAsync<ValidationException>(() => _service.ClaimAsync(Guid.NewGuid(), driverUserId));
@@ -251,7 +245,7 @@ public class ShipmentServiceTests : IDisposable
     [Fact]
     public async Task ClaimAsync_ValidClaim_AssignsDriverAndVehicle()
     {
-        // Arrange
+
         var driverUserId = Guid.NewGuid();
         var driverId = Guid.NewGuid();
         var vehicleId = Guid.NewGuid();
@@ -268,10 +262,8 @@ public class ShipmentServiceTests : IDisposable
         _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
         _shipmentRepoMock.Setup(r => r.GetByIdForUpdateAsync(shipmentId)).ReturnsAsync(shipment);
 
-        // Act
         var result = await _service.ClaimAsync(shipmentId, driverUserId);
 
-        // Assert
         Assert.NotNull(result);
         Assert.Equal("ASSIGNED", result.Status);
         Assert.Equal(driverId, shipment.DriverId);
@@ -286,7 +278,7 @@ public class ShipmentServiceTests : IDisposable
     [Fact]
     public async Task CancelClaimAsync_ValidCancel_ResetsToOpenAndIncrementsCancelCount()
     {
-        // Arrange
+
         var driverUserId = Guid.NewGuid();
         var driverId = Guid.NewGuid();
         var driver = new Driver { Id = driverId, UserId = driverUserId, CancelCount = 1 };
@@ -298,10 +290,8 @@ public class ShipmentServiceTests : IDisposable
 
         var request = new CancelClaimRequest { Reason = "Breakdown" };
 
-        // Act
         var result = await _service.CancelClaimAsync(shipmentId, driverUserId, request);
 
-        // Assert
         Assert.NotNull(result);
         Assert.Equal("OPEN", result.Status);
         Assert.Equal(2, result.DriverCancelCount);
@@ -318,7 +308,7 @@ public class ShipmentServiceTests : IDisposable
     [Fact]
     public async Task ConfirmPickupAsync_WrongOtp_IncrementsAttemptsAndThrowsValidationException()
     {
-        // Arrange
+
         var driverUserId = Guid.NewGuid();
         var driverId = Guid.NewGuid();
         var driver = new Driver { Id = driverId, UserId = driverUserId };
@@ -340,7 +330,6 @@ public class ShipmentServiceTests : IDisposable
 
         var request = new ConfirmPickupRequest { Otp = "1111" };
 
-        // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(() => _service.ConfirmPickupAsync(shipmentId, driverUserId, request));
         Assert.Equal(1, shipment.SenderOtpAttempts);
         _shipmentRepoMock.Verify(r => r.UpdateAsync(shipment), Times.Once);
@@ -349,7 +338,7 @@ public class ShipmentServiceTests : IDisposable
     [Fact]
     public async Task ConfirmPickupAsync_CorrectOtp_TransitionsToInTransit()
     {
-        // Arrange
+
         var driverUserId = Guid.NewGuid();
         var driverId = Guid.NewGuid();
         var driver = new Driver { Id = driverId, UserId = driverUserId };
@@ -371,10 +360,8 @@ public class ShipmentServiceTests : IDisposable
 
         var request = new ConfirmPickupRequest { Otp = "1234" };
 
-        // Act
         var result = await _service.ConfirmPickupAsync(shipmentId, driverUserId, request);
 
-        // Assert
         Assert.NotNull(result);
         Assert.Equal("IN_TRANSIT", result.Status);
         Assert.Equal(ShipmentStatus.IN_TRANSIT, shipment.Status);
@@ -384,7 +371,7 @@ public class ShipmentServiceTests : IDisposable
     [Fact]
     public async Task ConfirmDeliveryAsync_GeofenceBreach_ThrowsValidationException()
     {
-        // Arrange
+
         var driverUserId = Guid.NewGuid();
         var driverId = Guid.NewGuid();
         var driver = new Driver { Id = driverId, UserId = driverUserId };
@@ -401,12 +388,10 @@ public class ShipmentServiceTests : IDisposable
         };
         _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
-        // Driver coordinates too far (distance = 0.5km > 0.2km)
         _geoServiceMock.Setup(g => g.CalculateDistance(11.005m, 78.0m, 11.0m, 78.0m)).Returns(0.5);
 
         var request = new ConfirmDeliveryRequest { Otp = "5678", DriverLat = 11.005m, DriverLng = 78.0m };
 
-        // Act & Assert
         var ex = await Assert.ThrowsAsync<ValidationException>(() => _service.ConfirmDeliveryAsync(shipmentId, driverUserId, request));
         Assert.Equal("Driver is not within 200m of the delivery location.", ex.Message);
     }
@@ -414,7 +399,7 @@ public class ShipmentServiceTests : IDisposable
     [Fact]
     public async Task ConfirmDeliveryAsync_ValidOtpAndGeofence_TransitionsToDelivered()
     {
-        // Arrange
+
         var driverUserId = Guid.NewGuid();
         var driverId = Guid.NewGuid();
         var driver = new Driver { Id = driverId, UserId = driverUserId };
@@ -438,10 +423,8 @@ public class ShipmentServiceTests : IDisposable
 
         var request = new ConfirmDeliveryRequest { Otp = "5678", DriverLat = 11.0001m, DriverLng = 78.0m };
 
-        // Act
         var result = await _service.ConfirmDeliveryAsync(shipmentId, driverUserId, request);
 
-        // Assert
         Assert.NotNull(result);
         Assert.Equal("DELIVERED", result.Status);
         Assert.Equal(ShipmentStatus.DELIVERED, shipment.Status);
@@ -457,7 +440,7 @@ public class ShipmentServiceTests : IDisposable
     [Fact]
     public async Task GetPublicTrackingAsync_ValidParams_ReturnsTimeline()
     {
-        // Arrange
+
         var shipmentId = Guid.NewGuid();
         var customerId = Guid.NewGuid();
         var customer = new User { Id = customerId, Phone = "9876543210" };
@@ -476,10 +459,8 @@ public class ShipmentServiceTests : IDisposable
         _shipmentRepoMock.Setup(r => r.GetByPublicTrackParamsAsync("TRK-01", "9876543210")).ReturnsAsync(shipment);
         _otpServiceMock.Setup(o => o.GenerateDeterministicOtp(shipmentId, "receiver")).Returns("5678");
 
-        // Act
         var result = await _service.GetPublicTrackingAsync("TRK-01", "9876543210", "2026-06-15");
 
-        // Assert
         Assert.NotNull(result);
         Assert.Equal("TRK-01", result.OrderId);
         Assert.Equal("5678", result.ReceiverOtp);
@@ -621,7 +602,7 @@ public class ShipmentServiceTests : IDisposable
     [Fact]
     public async Task CancelClaimAsync_HighCancelCount_AlertsAdmin()
     {
-        // Arrange
+
         var driverUserId = Guid.NewGuid();
         var driverId = Guid.NewGuid();
         var driver = new Driver { Id = driverId, UserId = driverUserId, CancelCount = 2, User = new User { FullName = "Driver" } };
@@ -633,10 +614,8 @@ public class ShipmentServiceTests : IDisposable
 
         var request = new CancelClaimRequest { Reason = "Reason" };
 
-        // Act
         var result = await _service.CancelClaimAsync(shipmentId, driverUserId, request);
 
-        // Assert
         Assert.Equal(3, result.DriverCancelCount);
         _notificationServiceMock.Verify(n => n.BroadcastAdminAlertAsync("HIGH_CANCEL_COUNT", It.IsAny<object>()), Times.Once);
     }

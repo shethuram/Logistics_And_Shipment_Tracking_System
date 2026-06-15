@@ -16,10 +16,10 @@ public class LlmServiceTests
 
     public LlmServiceTests()
     {
-        // Setup configuration with an invalid Ollama URL so it triggers fallbacks
+
         var inMemorySettings = new Dictionary<string, string?>
         {
-            { "LlmSettings:OllamaUrl", "http://localhost:9999" }, // Invalid port
+            { "LlmSettings:OllamaUrl", "http://localhost:9999" },
             { "LlmSettings:Model", "qwen2.5" }
         };
 
@@ -41,10 +41,9 @@ public class LlmServiceTests
     public async Task ParseDeliveryNoteAsync_DetectsCorrectRisks(
         string notes, bool expectedRisk, RiskSeverity expectedSeverity, string? expectedReason)
     {
-        // Act
+
         var result = await _service.ParseDeliveryNoteAsync(notes);
 
-        // Assert
         Assert.Equal(expectedRisk, result.RiskFlag);
         Assert.Equal(expectedSeverity, result.RiskSeverity);
         Assert.Equal(expectedReason, result.RiskReason);
@@ -58,10 +57,9 @@ public class LlmServiceTests
     public async Task ParseDeliveryNoteAsync_DetectsCorrectPreferredTime(
         string notes, int? expectedHour, int? expectedMinute)
     {
-        // Act
+
         var result = await _service.ParseDeliveryNoteAsync(notes);
 
-        // Assert
         if (expectedHour.HasValue)
         {
             Assert.NotNull(result.PreferredDeliveryAfter);
@@ -86,10 +84,9 @@ public class LlmServiceTests
     [InlineData("General issue with app booking", DisputeLlmType.DRIVER_BEHAVIOUR)]
     public async Task AnalyzeDisputeAsync_CategorizesCorrectDisputeType(string complaint, DisputeLlmType expectedType)
     {
-        // Act
+
         var result = await _service.AnalyzeDisputeAsync(complaint);
 
-        // Assert
         Assert.Equal(expectedType, result.Type);
         Assert.NotNull(result.Summary);
         Assert.NotNull(result.SuggestedResolution);

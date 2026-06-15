@@ -68,7 +68,7 @@ public class TrackingServiceTests
         _driverRepoMock.Setup(r => r.GetByUserIdAsync(driverUserId)).ReturnsAsync(driver);
 
         var shipmentId = Guid.NewGuid();
-        var shipment = new Shipment { Id = shipmentId, DriverId = Guid.NewGuid() }; // Assigned to other driver
+        var shipment = new Shipment { Id = shipmentId, DriverId = Guid.NewGuid() };
         _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
         var request = new TrackingLocationRequest { ShipmentId = shipmentId, Latitude = 12.34m, Longitude = 56.78m };
 
@@ -83,7 +83,7 @@ public class TrackingServiceTests
         _driverRepoMock.Setup(r => r.GetByUserIdAsync(driverUserId)).ReturnsAsync(driver);
 
         var shipmentId = Guid.NewGuid();
-        var shipment = new Shipment { Id = shipmentId, DriverId = driver.Id, Status = ShipmentStatus.ASSIGNED }; // Not IN_TRANSIT
+        var shipment = new Shipment { Id = shipmentId, DriverId = driver.Id, Status = ShipmentStatus.ASSIGNED };
         _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
         var request = new TrackingLocationRequest { ShipmentId = shipmentId, Latitude = 12.34m, Longitude = 56.78m };
 
@@ -137,7 +137,6 @@ public class TrackingServiceTests
         var shipment = new Shipment { Id = shipmentId, CustomerId = Guid.NewGuid() };
         _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
-        // Try to access with different customer ID
         await Assert.ThrowsAsync<ForbiddenException>(() => 
             _service.GetLiveLocationAsync(shipmentId, Guid.NewGuid(), "CUSTOMER"));
     }

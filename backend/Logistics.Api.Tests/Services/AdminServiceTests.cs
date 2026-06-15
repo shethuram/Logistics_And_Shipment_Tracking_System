@@ -66,7 +66,7 @@ public class AdminServiceTests : IDisposable
     [Fact]
     public async Task ReassignShipmentAsync_ShipmentExists_ResetsStatusAndNotifies()
     {
-        // Arrange
+
         var shipmentId = Guid.NewGuid();
         var driverId = Guid.NewGuid();
         var driverUserId = Guid.NewGuid();
@@ -89,10 +89,8 @@ public class AdminServiceTests : IDisposable
         };
         _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
-        // Act
         var result = await _service.ReassignShipmentAsync(shipmentId);
 
-        // Assert
         Assert.NotNull(result);
         Assert.Equal("OPEN", result.Status);
         Assert.Null(result.DriverId);
@@ -105,15 +103,14 @@ public class AdminServiceTests : IDisposable
         _notificationServiceMock.Verify(n => n.CreateNotificationAsync(
             driverUserId, shipmentId, "Shipment Unassigned", It.IsAny<string>()), Times.Once);
         _notificationServiceMock.Verify(n => n.BroadcastShipmentUpdateAsync(shipmentId, "OPEN", It.IsAny<object>()), Times.Once);
-        
-        // Notification for eligible drivers is triggered on open status
+
         _notificationServiceMock.Verify(n => n.BroadcastNewJobAlertAsync("TWO_WHEELER", It.IsAny<object>()), Times.Once);
     }
 
     [Fact]
     public async Task GetMetricsAsync_ReturnsCorrectMetrics()
     {
-        // Arrange
+
         var customerId = Guid.NewGuid();
         var driver1UserId = Guid.NewGuid();
         var driver2UserId = Guid.NewGuid();
@@ -124,43 +121,39 @@ public class AdminServiceTests : IDisposable
 
         _db.Users.AddRange(user, driverUser1, driverUser2);
 
-        // Add Shipments of different statuses
         _db.Shipments.AddRange(
             new Shipment { Id = Guid.NewGuid(), CustomerId = customerId, OrderId = "TRK-1", Status = ShipmentStatus.DELIVERED, CreatedAt = DateTime.UtcNow.AddMinutes(-60), StatusUpdatedAt = DateTime.UtcNow, StatusChangedBy = customerId },
-            new Shipment { Id = Guid.NewGuid(), CustomerId = customerId, OrderId = "TRK-2", Status = ShipmentStatus.DELIVERED, CreatedAt = DateTime.UtcNow.AddMinutes(-30), StatusUpdatedAt = DateTime.UtcNow, StatusChangedBy = customerId, CashCollected = true }, // Cash collected COD
+            new Shipment { Id = Guid.NewGuid(), CustomerId = customerId, OrderId = "TRK-2", Status = ShipmentStatus.DELIVERED, CreatedAt = DateTime.UtcNow.AddMinutes(-30), StatusUpdatedAt = DateTime.UtcNow, StatusChangedBy = customerId, CashCollected = true },
             new Shipment { Id = Guid.NewGuid(), CustomerId = customerId, OrderId = "TRK-3", Status = ShipmentStatus.CANCELLED, StatusChangedBy = customerId },
             new Shipment { Id = Guid.NewGuid(), CustomerId = customerId, OrderId = "TRK-4", Status = ShipmentStatus.PICKUP_FAILED, StatusChangedBy = customerId },
             new Shipment { Id = Guid.NewGuid(), CustomerId = customerId, OrderId = "TRK-5", Status = ShipmentStatus.STALE, StatusChangedBy = customerId }
         );
 
-        // Add Online/Offline drivers
         _db.Drivers.AddRange(
-            new Driver { Id = Guid.NewGuid(), UserId = driver1UserId, LicenseNumber = "D1", OperationalStatus = OperationalStatus.ONLINE, CancelCount = 4 }, // High cancel count
+            new Driver { Id = Guid.NewGuid(), UserId = driver1UserId, LicenseNumber = "D1", OperationalStatus = OperationalStatus.ONLINE, CancelCount = 4 },
             new Driver { Id = Guid.NewGuid(), UserId = driver2UserId, LicenseNumber = "D2", OperationalStatus = OperationalStatus.OFFLINE }
         );
 
         _db.SaveChanges();
 
-        // Act
         var result = await _service.GetMetricsAsync();
 
-        // Assert
         Assert.Equal(5, result.TotalShipments);
         Assert.Equal(2, result.Delivered);
-        Assert.Equal(1, result.Pending); // total - delivered - cancelled - failed
+        Assert.Equal(1, result.Pending);
         Assert.Equal(1, result.Cancelled);
         Assert.Equal(1, result.Failed);
         Assert.Equal(1, result.StaleShipments);
-        Assert.Equal(1, result.CodPending); // TRK-1 is delivered but CashCollected = false
+        Assert.Equal(1, result.CodPending);
         Assert.Equal(1, result.DriversOnline);
         Assert.Equal(1, result.DriversWithHighCancelCount);
-        Assert.Equal(45, result.AvgDeliveryTimeMinutes); // (60 + 30) / 2 = 45 mins
+        Assert.Equal(45, result.AvgDeliveryTimeMinutes);
     }
 
     [Fact]
     public async Task ExportShipmentsCsvAsync_ReturnsValidCsvFile()
     {
-        // Arrange
+
         var customerId = Guid.NewGuid();
         var user = new User { Id = customerId, FullName = "Arjun Kumar", Email = "arjun@example.com", Phone = "9876543210" };
         _db.Users.Add(user);
@@ -182,11 +175,9 @@ public class AdminServiceTests : IDisposable
         _db.Shipments.Add(shipment);
         _db.SaveChanges();
 
-        // Act
         var csvBytes = await _service.ExportShipmentsCsvAsync("DELIVERED", null, null);
         var csvString = Encoding.UTF8.GetString(csvBytes);
 
-        // Assert
         Assert.Contains("OrderId,CustomerName,CustomerEmail", csvString);
         Assert.Contains("TRK-00001", csvString);
         Assert.Contains("Arjun Kumar", csvString);

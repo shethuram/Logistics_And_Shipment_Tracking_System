@@ -137,12 +137,10 @@ public class AuthServiceTests : IDisposable
             LicenseNumber = "TN33AB9999" 
         };
 
-        // Make driver repo fail so the transaction rolls back
         _driverRepoMock.Setup(r => r.AddAsync(It.IsAny<Driver>())).ThrowsAsync(new Exception("Database crash"));
 
         await Assert.ThrowsAsync<Exception>(() => _service.RegisterDriverAsync(request));
 
-        // Verify that the transaction rolled back. (SQLite database will be empty because nothing was committed)
         var usersCount = await _db.Users.CountAsync();
         Assert.Equal(0, usersCount);
     }

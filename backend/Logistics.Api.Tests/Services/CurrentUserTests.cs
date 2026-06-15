@@ -23,7 +23,7 @@ public class CurrentUserTests : IDisposable
 
     public CurrentUserTests()
     {
-        // Setup SQLite In-Memory Database
+
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
 
@@ -35,7 +35,6 @@ public class CurrentUserTests : IDisposable
         _db = new AppDbContext(options);
         _db.Database.EnsureCreated();
 
-        // Setup HTTP context mocks
         _httpContextAccessorMock = new Mock<IHttpContextAccessor>();
         _httpContextMock = new Mock<HttpContext>();
         _items = new Dictionary<object, object?>();
@@ -54,24 +53,22 @@ public class CurrentUserTests : IDisposable
     [Fact]
     public void Id_NotAuthenticated_ReturnsGuidEmpty()
     {
-        // Arrange
-        var identity = new ClaimsIdentity(); // IsAuthenticated = false
+
+        var identity = new ClaimsIdentity();
         var principal = new ClaimsPrincipal(identity);
         _httpContextMock.Setup(c => c.User).Returns(principal);
         
         var currentUser = new CurrentUser(_httpContextAccessorMock.Object, _db);
 
-        // Act
         var result = currentUser.Id;
 
-        // Assert
         Assert.Equal(Guid.Empty, result);
     }
 
     [Fact]
     public void Id_AuthenticatedButUserNotFound_ReturnsGuidEmpty()
     {
-        // Arrange
+
         var identity = new ClaimsIdentity(new[]
         {
             new Claim(ClaimTypes.NameIdentifier, "auth0|nonexistent")
@@ -81,17 +78,15 @@ public class CurrentUserTests : IDisposable
 
         var currentUser = new CurrentUser(_httpContextAccessorMock.Object, _db);
 
-        // Act
         var result = currentUser.Id;
 
-        // Assert
         Assert.Equal(Guid.Empty, result);
     }
 
     [Fact]
     public void Id_AuthenticatedAndUserExists_ReturnsUserIdAndCaches()
     {
-        // Arrange
+
         var auth0Id = "auth0|existing_user";
         var user = new User
         {
@@ -114,10 +109,8 @@ public class CurrentUserTests : IDisposable
 
         var currentUser = new CurrentUser(_httpContextAccessorMock.Object, _db);
 
-        // Act
         var result = currentUser.Id;
 
-        // Assert
         Assert.Equal(user.Id, result);
         Assert.True(_items.ContainsKey("DbUserId"));
         Assert.Equal(user.Id, _items["DbUserId"]);
@@ -128,7 +121,7 @@ public class CurrentUserTests : IDisposable
     [Fact]
     public void Id_CachedInItems_ReturnsCachedIdWithoutQueryingDb()
     {
-        // Arrange
+
         var cachedId = Guid.NewGuid();
         _items["DbUserId"] = cachedId;
 
@@ -139,37 +132,32 @@ public class CurrentUserTests : IDisposable
         var principal = new ClaimsPrincipal(identity);
         _httpContextMock.Setup(c => c.User).Returns(principal);
 
-        // Create empty DB context to verify it doesn't try to query DB
         var currentUser = new CurrentUser(_httpContextAccessorMock.Object, _db);
 
-        // Act
         var result = currentUser.Id;
 
-        // Assert
         Assert.Equal(cachedId, result);
     }
 
     [Fact]
     public void Role_NotAuthenticated_ReturnsDefaultCustomer()
     {
-        // Arrange
-        var identity = new ClaimsIdentity(); // IsAuthenticated = false
+
+        var identity = new ClaimsIdentity();
         var principal = new ClaimsPrincipal(identity);
         _httpContextMock.Setup(c => c.User).Returns(principal);
 
         var currentUser = new CurrentUser(_httpContextAccessorMock.Object, _db);
 
-        // Act
         var result = currentUser.Role;
 
-        // Assert
         Assert.Equal("CUSTOMER", result);
     }
 
     [Fact]
     public void Role_AuthenticatedAndUserExists_ReturnsUppercaseRoleAndCaches()
     {
-        // Arrange
+
         var auth0Id = "auth0|existing_driver";
         var user = new User
         {
@@ -192,10 +180,8 @@ public class CurrentUserTests : IDisposable
 
         var currentUser = new CurrentUser(_httpContextAccessorMock.Object, _db);
 
-        // Act
         var result = currentUser.Role;
 
-        // Assert
         Assert.Equal("DRIVER", result);
         Assert.True(_items.ContainsKey("DbUserRole"));
         Assert.Equal("DRIVER", _items["DbUserRole"]);
@@ -204,7 +190,7 @@ public class CurrentUserTests : IDisposable
     [Fact]
     public void Role_CachedInItems_ReturnsCachedRole()
     {
-        // Arrange
+
         _items["DbUserRole"] = "ADMIN";
 
         var identity = new ClaimsIdentity(new[]
@@ -216,10 +202,8 @@ public class CurrentUserTests : IDisposable
 
         var currentUser = new CurrentUser(_httpContextAccessorMock.Object, _db);
 
-        // Act
         var result = currentUser.Role;
 
-        // Assert
         Assert.Equal("ADMIN", result);
     }
 }
