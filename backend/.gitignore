@@ -1,0 +1,12 @@
+# Ignore dotnet artifacts
+bin/
+obj/
+Docs/copilot_context.md
+Logistics_Shipment_Tracking_System.postman_collection.json
+*.user
+*.userosscache
+*.sln.docstates
+
+# Ignore sensitive settings
+appsettings.Development.json
+appsettings.local.json
