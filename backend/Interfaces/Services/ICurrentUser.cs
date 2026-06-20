@@ -4,4 +4,5 @@ public interface ICurrentUser
 {
     Guid Id { get; }
     string Role { get; }
+    Guid? DriverId { get; }
 }

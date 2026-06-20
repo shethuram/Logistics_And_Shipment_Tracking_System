@@ -1,54 +1,63 @@
 using System.ComponentModel.DataAnnotations;
+using Logistics.Api.Models;
 
 namespace Logistics.Api.DTOs;
 
 public record CreateShipmentRequest
 {
     [Required]
+    [StringLength(500, MinimumLength = 5)]
     public string PickupAddress { get; init; } = string.Empty;
 
     [Required]
+    [Range(-90.0, 90.0)]
     public decimal PickupLat { get; init; }
 
     [Required]
+    [Range(-180.0, 180.0)]
     public decimal PickupLng { get; init; }
 
     [Required]
+    [StringLength(500, MinimumLength = 5)]
     public string DropAddress { get; init; } = string.Empty;
 
     [Required]
+    [Range(-90.0, 90.0)]
     public decimal DropLat { get; init; }
 
     [Required]
+    [Range(-180.0, 180.0)]
     public decimal DropLng { get; init; }
 
     [Required]
+    [StringLength(100, MinimumLength = 2)]
     public string ReceiverName { get; init; } = string.Empty;
 
     [Required]
-    [Phone]
+    [RegularExpression(@"^\d{10}$", ErrorMessage = "Phone number must be exactly 10 digits.")]
     public string ReceiverPhone { get; init; } = string.Empty;
 
     [Required]
-    public string PackageType { get; init; } = string.Empty; // DOCUMENT, SMALL_PARCEL, etc.
+    public PackageType PackageType { get; init; }
 
     [Required]
     [Range(0.01, 10000.0)]
     public decimal WeightKg { get; init; }
 
-    public string? PreferredWindow { get; init; } // MORNING, AFTERNOON, EVENING
+    public PreferredWindow? PreferredWindow { get; init; }
 
+    [StringLength(500)]
     public string? SpecialNotes { get; init; }
 
     [Required]
-    public string PaymentMethod { get; init; } = string.Empty; // COD, ONLINE
+    public PaymentMethod PaymentMethod { get; init; }
 }
 
 public record CreateShipmentResponse
 {
     public Guid Id { get; init; }
     public string OrderId { get; init; } = string.Empty;
-    public string Status { get; init; } = string.Empty;
+    public ShipmentStatus Status { get; init; }
     public string? PaymentUrl { get; init; }
     public string? SenderOtp { get; init; }
 }
@@ -57,7 +66,7 @@ public record ShipmentDriverDto
 {
     public Guid Id { get; init; }
     public string FullName { get; init; } = string.Empty;
-    public string VehicleType { get; init; } = string.Empty;
+    public VehicleType? VehicleType { get; init; }
     public string VehicleNumber { get; init; } = string.Empty;
 }
 
@@ -65,7 +74,7 @@ public record ShipmentResponse
 {
     public Guid Id { get; init; }
     public string OrderId { get; init; } = string.Empty;
-    public string Status { get; init; } = string.Empty;
+    public ShipmentStatus Status { get; init; }
     public string PickupAddress { get; init; } = string.Empty;
     public decimal PickupLat { get; init; }
     public decimal PickupLng { get; init; }
@@ -74,15 +83,15 @@ public record ShipmentResponse
     public decimal DropLng { get; init; }
     public string ReceiverName { get; init; } = string.Empty;
     public string ReceiverPhone { get; init; } = string.Empty;
-    public string PackageType { get; init; } = string.Empty;
+    public PackageType PackageType { get; init; }
     public decimal WeightKg { get; init; }
-    public string? PreferredWindow { get; init; }
+    public PreferredWindow? PreferredWindow { get; init; }
     public string? SpecialNotes { get; init; }
 
     // LLM fields
     public string? DriverInstruction { get; init; }
     public bool RiskFlag { get; init; }
-    public string RiskSeverity { get; init; } = string.Empty;
+    public RiskSeverity RiskSeverity { get; init; }
     public string? RiskReason { get; init; }
     public TimeOnly? PreferredDeliveryAfter { get; init; }
 
@@ -97,14 +106,15 @@ public record ShipmentResponse
 
 public record UpdateShipmentRequest
 {
-    public string? PreferredWindow { get; init; }
+    public PreferredWindow? PreferredWindow { get; init; }
+    [StringLength(500)]
     public string? SpecialNotes { get; init; }
 }
 
 public record CancelShipmentResponse
 {
     public Guid Id { get; init; }
-    public string Status { get; init; } = string.Empty;
+    public ShipmentStatus Status { get; init; }
     public bool RefundInitiated { get; init; }
 }
 
@@ -114,9 +124,9 @@ public record AvailableShipmentDto
     public string OrderId { get; init; } = string.Empty;
     public string PickupAddress { get; init; } = string.Empty;
     public string DropAddress { get; init; } = string.Empty;
-    public string PackageType { get; init; } = string.Empty;
+    public PackageType PackageType { get; init; }
     public decimal WeightKg { get; init; }
-    public string? PreferredWindow { get; init; }
+    public PreferredWindow? PreferredWindow { get; init; }
     public string SenderPhone { get; init; } = string.Empty;
     public string ReceiverPhone { get; init; } = string.Empty;
     public double DistanceToPickupKm { get; init; }
@@ -126,20 +136,21 @@ public record AvailableShipmentDto
 public record ClaimShipmentResponse
 {
     public Guid Id { get; init; }
-    public string Status { get; init; } = string.Empty;
+    public ShipmentStatus Status { get; init; }
     public string OrderId { get; init; } = string.Empty;
 }
 
 public record CancelClaimRequest
 {
     [Required]
+    [StringLength(500, MinimumLength = 5)]
     public string Reason { get; init; } = string.Empty;
 }
 
 public record CancelClaimResponse
 {
     public Guid Id { get; init; }
-    public string Status { get; init; } = string.Empty;
+    public ShipmentStatus Status { get; init; }
     public int DriverCancelCount { get; init; }
 }
 
@@ -152,7 +163,7 @@ public record ConfirmPickupRequest
 public record ConfirmPickupResponse
 {
     public Guid Id { get; init; }
-    public string Status { get; init; } = string.Empty;
+    public ShipmentStatus Status { get; init; }
 }
 
 public record ConfirmDeliveryRequest
@@ -161,16 +172,18 @@ public record ConfirmDeliveryRequest
     public string Otp { get; init; } = string.Empty;
 
     [Required]
+    [Range(-90.0, 90.0)]
     public decimal DriverLat { get; init; }
 
     [Required]
+    [Range(-180.0, 180.0)]
     public decimal DriverLng { get; init; }
 }
 
 public record ConfirmDeliveryResponse
 {
     public Guid Id { get; init; }
-    public string Status { get; init; } = string.Empty;
+    public ShipmentStatus Status { get; init; }
     public DateTime DeliveredAt { get; init; }
 }
 
@@ -183,28 +196,28 @@ public record CashCollectedResponse
 public record PickupFailedRequest
 {
     [Required]
+    [StringLength(500, MinimumLength = 5)]
     public string Reason { get; init; } = string.Empty;
 }
 
 public record PickupFailedResponse
 {
     public Guid Id { get; init; }
-    public string Status { get; init; } = string.Empty;
+    public ShipmentStatus Status { get; init; }
 }
 
 public record PublicTrackingResponse
 {
     public Guid Id { get; init; }
     public string OrderId { get; init; } = string.Empty;
-    public string Status { get; init; } = string.Empty;
+    public ShipmentStatus Status { get; init; }
     public string PickupAddress { get; init; } = string.Empty;
     public string DropAddress { get; init; } = string.Empty;
-    public string PackageType { get; init; } = string.Empty;
+    public PackageType PackageType { get; init; }
     public decimal WeightKg { get; init; }
-    public string? PreferredWindow { get; init; }
+    public PreferredWindow? PreferredWindow { get; init; }
     public string? SpecialNotes { get; init; }
     public DateTime CreatedAt { get; init; }
-    public string ReceiverOtp { get; init; } = string.Empty;
     public PublicTrackingDriverDto? Driver { get; init; }
     public DriverLocationDto? DriverLocation { get; init; }
     public List<TimelineEntryDto> Timeline { get; init; } = new();
@@ -213,7 +226,7 @@ public record PublicTrackingResponse
 public record PublicTrackingDriverDto
 {
     public string FullName { get; init; } = string.Empty;
-    public string VehicleType { get; init; } = string.Empty;
+    public VehicleType? VehicleType { get; init; }
     public string VehicleNumber { get; init; } = string.Empty;
 }
 

@@ -61,31 +61,6 @@ public class DisputeServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task RaiseDisputeAsync_ShipmentNotFound_ThrowsNotFoundException()
-    {
-        var customerId = Guid.NewGuid();
-        var shipmentId = Guid.NewGuid();
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync((Shipment)null!);
-
-        var request = new RaiseDisputeRequest { ShipmentId = shipmentId, ComplaintText = "Text" };
-
-        await Assert.ThrowsAsync<NotFoundException>(() => _service.RaiseDisputeAsync(request, customerId));
-    }
-
-    [Fact]
-    public async Task RaiseDisputeAsync_NotCustomerShipment_ThrowsForbiddenException()
-    {
-        var customerId = Guid.NewGuid();
-        var shipmentId = Guid.NewGuid();
-        var shipment = new Shipment { Id = shipmentId, CustomerId = Guid.NewGuid() };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
-
-        var request = new RaiseDisputeRequest { ShipmentId = shipmentId, ComplaintText = "Text" };
-
-        await Assert.ThrowsAsync<ForbiddenException>(() => _service.RaiseDisputeAsync(request, customerId));
-    }
-
-    [Fact]
     public async Task RaiseDisputeAsync_DuplicateDispute_ThrowsConflictException()
     {
         var customerId = Guid.NewGuid();
@@ -98,15 +73,11 @@ public class DisputeServiceTests : IDisposable
         _db.Shipments.Add(shipment);
         _db.SaveChanges();
 
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
-
         var existingDispute = new Dispute { Id = Guid.NewGuid(), ShipmentId = shipmentId, RaisedBy = customerId, ComplaintText = "First text" };
         _db.Disputes.Add(existingDispute);
         _db.SaveChanges();
 
-        var request = new RaiseDisputeRequest { ShipmentId = shipmentId, ComplaintText = "Second text" };
-
-        await Assert.ThrowsAsync<ConflictException>(() => _service.RaiseDisputeAsync(request, customerId));
+        await Assert.ThrowsAsync<ConflictException>(() => _service.RaiseDisputeAsync(shipment, "Second text", customerId));
     }
 
     [Fact]
@@ -115,17 +86,14 @@ public class DisputeServiceTests : IDisposable
         var customerId = Guid.NewGuid();
         var shipmentId = Guid.NewGuid();
         var shipment = new Shipment { Id = shipmentId, CustomerId = customerId, OrderId = "TRK-001" };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
         _llmServiceMock.Setup(l => l.AnalyzeDisputeAsync("Complaint"))
             .ReturnsAsync(("Summary", DisputeLlmType.WRONG_ADDRESS, "Resolution"));
 
-        var request = new RaiseDisputeRequest { ShipmentId = shipmentId, ComplaintText = "Complaint" };
-
-        var result = await _service.RaiseDisputeAsync(request, customerId);
+        var result = await _service.RaiseDisputeAsync(shipment, "Complaint", customerId);
 
         Assert.NotNull(result);
-        Assert.Equal("OPEN", result.Status);
+        Assert.Equal(DisputeStatus.OPEN, result.Status);
         
         _disputeRepoMock.Verify(r => r.AddAsync(It.Is<Dispute>(d => 
             d.ShipmentId == shipmentId && 
@@ -135,20 +103,6 @@ public class DisputeServiceTests : IDisposable
         )), Times.Once);
 
         _notificationServiceMock.Verify(n => n.BroadcastAdminAlertAsync("NEW_DISPUTE", It.IsAny<object>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetDisputesAsync_NotAdmin_ThrowsForbiddenException()
-    {
-        await Assert.ThrowsAsync<ForbiddenException>(() => 
-            _service.GetDisputesAsync("OPEN", 1, 20, "CUSTOMER"));
-    }
-
-    [Fact]
-    public async Task GetDisputesAsync_InvalidStatusFilter_ThrowsValidationException()
-    {
-        await Assert.ThrowsAsync<ValidationException>(() => 
-            _service.GetDisputesAsync("INVALID", 1, 20, "ADMIN"));
     }
 
     [Fact]
@@ -168,7 +122,7 @@ public class DisputeServiceTests : IDisposable
         _disputeRepoMock.Setup(r => r.GetDisputesAsync(DisputeStatus.OPEN, 1, 20))
             .ReturnsAsync((disputes, 1));
 
-        var result = await _service.GetDisputesAsync("OPEN", 1, 20, "ADMIN");
+        var result = await _service.GetDisputesAsync(DisputeStatus.OPEN, 1, 20);
 
         Assert.NotNull(result);
         Assert.Equal(1, result.Total);
@@ -177,24 +131,14 @@ public class DisputeServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ResolveDisputeAsync_NotAdmin_ThrowsForbiddenException()
-    {
-        var disputeId = Guid.NewGuid();
-        var request = new ResolveDisputeRequest { Status = "RESOLVED", ResolutionNotes = "Notes" };
-        
-        await Assert.ThrowsAsync<ForbiddenException>(() => 
-            _service.ResolveDisputeAsync(disputeId, request, Guid.NewGuid(), "CUSTOMER"));
-    }
-
-    [Fact]
     public async Task ResolveDisputeAsync_DisputeNotFound_ThrowsNotFoundException()
     {
         var disputeId = Guid.NewGuid();
         _disputeRepoMock.Setup(r => r.GetByIdAsync(disputeId)).ReturnsAsync((Dispute)null!);
-        var request = new ResolveDisputeRequest { Status = "RESOLVED", ResolutionNotes = "Notes" };
+        var request = new ResolveDisputeRequest { Status = DisputeStatus.RESOLVED, ResolutionNotes = "Notes" };
 
         await Assert.ThrowsAsync<NotFoundException>(() => 
-            _service.ResolveDisputeAsync(disputeId, request, Guid.NewGuid(), "ADMIN"));
+            _service.ResolveDisputeAsync(disputeId, request, Guid.NewGuid()));
     }
 
     [Fact]
@@ -203,10 +147,10 @@ public class DisputeServiceTests : IDisposable
         var disputeId = Guid.NewGuid();
         var dispute = new Dispute { Id = disputeId, Status = DisputeStatus.RESOLVED };
         _disputeRepoMock.Setup(r => r.GetByIdAsync(disputeId)).ReturnsAsync(dispute);
-        var request = new ResolveDisputeRequest { Status = "RESOLVED", ResolutionNotes = "Notes" };
+        var request = new ResolveDisputeRequest { Status = DisputeStatus.RESOLVED, ResolutionNotes = "Notes" };
 
         await Assert.ThrowsAsync<BusinessRuleException>(() => 
-            _service.ResolveDisputeAsync(disputeId, request, Guid.NewGuid(), "ADMIN"));
+            _service.ResolveDisputeAsync(disputeId, request, Guid.NewGuid()));
     }
 
     [Fact]
@@ -215,10 +159,10 @@ public class DisputeServiceTests : IDisposable
         var disputeId = Guid.NewGuid();
         var dispute = new Dispute { Id = disputeId, Status = DisputeStatus.OPEN };
         _disputeRepoMock.Setup(r => r.GetByIdAsync(disputeId)).ReturnsAsync(dispute);
-        var request = new ResolveDisputeRequest { Status = "OPEN", ResolutionNotes = "Notes" };
+        var request = new ResolveDisputeRequest { Status = DisputeStatus.OPEN, ResolutionNotes = "Notes" };
 
         await Assert.ThrowsAsync<ValidationException>(() => 
-            _service.ResolveDisputeAsync(disputeId, request, Guid.NewGuid(), "ADMIN"));
+            _service.ResolveDisputeAsync(disputeId, request, Guid.NewGuid()));
     }
 
     [Fact]
@@ -235,12 +179,12 @@ public class DisputeServiceTests : IDisposable
         };
         _disputeRepoMock.Setup(r => r.GetByIdAsync(disputeId)).ReturnsAsync(dispute);
         var adminUserId = Guid.NewGuid();
-        var request = new ResolveDisputeRequest { Status = "RESOLVED", ResolutionNotes = "Refund given" };
+        var request = new ResolveDisputeRequest { Status = DisputeStatus.RESOLVED, ResolutionNotes = "Refund given" };
 
-        var result = await _service.ResolveDisputeAsync(disputeId, request, adminUserId, "ADMIN");
+        var result = await _service.ResolveDisputeAsync(disputeId, request, adminUserId);
 
         Assert.NotNull(result);
-        Assert.Equal("RESOLVED", result.Status);
+        Assert.Equal(DisputeStatus.RESOLVED, result.Status);
         Assert.Equal(DisputeStatus.RESOLVED, dispute.Status);
         Assert.Equal(adminUserId, dispute.ResolvedBy);
         Assert.Equal("Refund given", dispute.ResolutionNotes);

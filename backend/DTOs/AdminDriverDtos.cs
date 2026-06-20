@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Logistics.Api.Models;
 
 namespace Logistics.Api.DTOs;
 
@@ -12,7 +13,7 @@ public record PagedResult<T>
 
 public record PendingDriverVehicleDto
 {
-    public string VehicleType { get; init; } = string.Empty;
+    public VehicleType VehicleType { get; init; }
     public string VehicleNumber { get; init; } = string.Empty;
 }
 
@@ -29,25 +30,27 @@ public record PendingDriverDto
 public record ApproveDriverResponse
 {
     public Guid Id { get; init; }
-    public string ApprovalStatus { get; init; } = string.Empty;
+    public ApprovalStatus ApprovalStatus { get; init; }
     public DateTime? ApprovedAt { get; init; }
 }
 
 public record RejectDriverRequest
 {
     [Required]
+    [StringLength(500, MinimumLength = 5)]
     public string Reason { get; init; } = string.Empty;
 }
 
 public record SuspendDriverRequest
 {
     [Required]
+    [StringLength(500, MinimumLength = 5)]
     public string Reason { get; init; } = string.Empty;
 }
 
 public record DriverApprovalResponse
 {
     public Guid Id { get; init; }
-    public string ApprovalStatus { get; init; } = string.Empty;
+    public ApprovalStatus ApprovalStatus { get; init; }
     public string? ApprovalReason { get; init; }
 }

@@ -4,59 +4,62 @@ using Logistics.Api.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using Logistics.Api.Interfaces.Repositories;
 namespace Logistics.Api.Controllers;
 
 [ApiController]
-[Route("api/drivers/{id:guid}/vehicles")]
+[Route("api/drivers/vehicles")]
 [Authorize(Roles = "DRIVER")]
 public class DriverVehiclesController : ControllerBase
 {
     private readonly IDriverVehicleService _vehicleService;
+    private readonly IDriverRepository _driverRepo;
     private readonly ICurrentUser _currentUser;
 
-    public DriverVehiclesController(IDriverVehicleService vehicleService, ICurrentUser currentUser)
+    public DriverVehiclesController(IDriverVehicleService vehicleService, IDriverRepository driverRepo, ICurrentUser currentUser)
     {
         _vehicleService = vehicleService;
+        _driverRepo = driverRepo;
         _currentUser = currentUser;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetVehicles(Guid id)
+    public async Task<IActionResult> GetVehicles()
     {
-        if (id != _currentUser.Id)
-            throw new ForbiddenException("You are not authorized to view this driver's profile.");
+        var driver = await _driverRepo.GetByUserIdAsync(_currentUser.Id);
+        if (driver == null) throw new NotFoundException("Driver profile not found.");
 
-        var result = await _vehicleService.GetVehiclesAsync(id);
+        var result = await _vehicleService.GetVehiclesAsync(driver.Id);
         return Ok(result);
     }
 
     [HttpPost]
-    public async Task<IActionResult> AddVehicle(Guid id, AddVehicleRequest request)
+    public async Task<IActionResult> AddVehicle(AddVehicleRequest request)
     {
-        if (id != _currentUser.Id)
-            throw new ForbiddenException("You are not authorized to modify this driver's profile.");
+        var driver = await _driverRepo.GetByUserIdAsync(_currentUser.Id);
+        if (driver == null) throw new NotFoundException("Driver profile not found.");
 
-        var result = await _vehicleService.AddVehicleAsync(id, request);
-        return CreatedAtAction(nameof(GetVehicles), new { id }, result);
+        var result = await _vehicleService.AddVehicleAsync(driver.Id, request);
+        return CreatedAtAction(nameof(GetVehicles), new { }, result);
     }
 
     [HttpPut("{vehicleId:guid}")]
-    public async Task<IActionResult> UpdateVehicle(Guid id, Guid vehicleId, UpdateVehicleRequest request)
+    public async Task<IActionResult> UpdateVehicle(Guid vehicleId, UpdateVehicleRequest request)
     {
-        if (id != _currentUser.Id)
-            throw new ForbiddenException("You are not authorized to modify this driver's profile.");
+        var driver = await _driverRepo.GetByUserIdAsync(_currentUser.Id);
+        if (driver == null) throw new NotFoundException("Driver profile not found.");
 
-        var result = await _vehicleService.UpdateVehicleAsync(id, vehicleId, request);
+        var result = await _vehicleService.UpdateVehicleAsync(driver.Id, vehicleId, request);
         return Ok(result);
     }
 
     [HttpPost("{vehicleId:guid}/set-active")]
-    public async Task<IActionResult> SetActive(Guid id, Guid vehicleId)
+    public async Task<IActionResult> SetActive(Guid vehicleId)
     {
-        if (id != _currentUser.Id)
-            throw new ForbiddenException("You are not authorized to modify this driver's profile.");
+        var driver = await _driverRepo.GetByUserIdAsync(_currentUser.Id);
+        if (driver == null) throw new NotFoundException("Driver profile not found.");
 
-        var result = await _vehicleService.SetActiveVehicleAsync(id, vehicleId);
+        var result = await _vehicleService.SetActiveVehicleAsync(driver.Id, vehicleId);
         return Ok(result);
     }
 }

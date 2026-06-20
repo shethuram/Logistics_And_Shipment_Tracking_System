@@ -26,23 +26,12 @@ public class TrackingService : ITrackingService
         _notificationService = notificationService;
     }
 
-    public async Task RecordLocationAsync(TrackingLocationRequest request, Guid driverUserId)
+    public async Task RecordLocationAsync(TrackingLocationRequest request, Shipment shipment, Guid driverUserId)
     {
         var driver = await _driverRepo.GetByUserIdAsync(driverUserId);
         if (driver == null)
         {
             throw new NotFoundException("Driver profile not found.");
-        }
-
-        var shipment = await _shipmentRepo.GetByIdAsync(request.ShipmentId);
-        if (shipment == null)
-        {
-            throw new NotFoundException("Shipment not found.");
-        }
-
-        if (shipment.DriverId != driver.Id)
-        {
-            throw new ForbiddenException("You are not assigned to this shipment.");
         }
 
         if (shipment.Status != ShipmentStatus.IN_TRANSIT)
@@ -71,35 +60,19 @@ public class TrackingService : ITrackingService
         await _notificationService.BroadcastDriverLocationAsync(request.ShipmentId, request.Latitude, request.Longitude);
     }
 
-    public async Task<LiveTrackingResponse> GetLiveLocationAsync(Guid shipmentId, Guid userId, string role)
+    public async Task<LiveTrackingResponse> GetLiveLocationAsync(Shipment shipment)
     {
-        var shipment = await _shipmentRepo.GetByIdAsync(shipmentId);
-        if (shipment == null)
-        {
-            throw new NotFoundException("Shipment not found.");
-        }
-
-        if (role != "ADMIN" && (role != "CUSTOMER" || shipment.CustomerId != userId))
-        {
-            throw new ForbiddenException("You are not authorized to track this shipment.");
-        }
-
-        var latestPing = await _trackingRepo.GetLatestPingAsync(shipmentId);
+        var latestPing = await _trackingRepo.GetLatestPingAsync(shipment.Id);
 
         return new LiveTrackingResponse
         {
-            ShipmentId = shipmentId,
+            ShipmentId = shipment.Id,
             DriverLocation = latestPing?.ToDriverLocationDto()
         };
     }
 
-    public async Task<IReadOnlyList<TrackingHistoryResponse>> GetHistoryAsync(Guid shipmentId, string role)
+    public async Task<IReadOnlyList<TrackingHistoryResponse>> GetHistoryAsync(Guid shipmentId)
     {
-        if (role != "ADMIN")
-        {
-            throw new ForbiddenException("You are not authorized to view tracking history.");
-        }
-
         var shipment = await _shipmentRepo.GetByIdAsync(shipmentId);
         if (shipment == null)
         {

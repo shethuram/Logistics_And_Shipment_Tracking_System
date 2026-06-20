@@ -13,6 +13,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
+using Microsoft.Extensions.Logging;
 
 namespace Logistics.Api.Tests.Services;
 
@@ -27,6 +28,9 @@ public class ShipmentServiceTests : IDisposable
     private readonly Mock<IOtpService> _otpServiceMock;
     private readonly Mock<INotificationService> _notificationServiceMock;
     private readonly Mock<ILlmService> _llmServiceMock;
+    private readonly Mock<ILogger<ShipmentService>> _loggerMock;
+    private readonly Mock<IEmailService> _emailServiceMock;
+    private readonly Mock<IEmailTemplateService> _emailTemplateServiceMock;
     private readonly ShipmentService _service;
 
     public ShipmentServiceTests()
@@ -49,6 +53,13 @@ public class ShipmentServiceTests : IDisposable
         _otpServiceMock = new Mock<IOtpService>();
         _notificationServiceMock = new Mock<INotificationService>();
         _llmServiceMock = new Mock<ILlmService>();
+        _loggerMock = new Mock<ILogger<ShipmentService>>();
+        _emailServiceMock = new Mock<IEmailService>();
+        _emailTemplateServiceMock = new Mock<IEmailTemplateService>();
+
+        _emailTemplateServiceMock
+            .Setup(t => t.GenerateShipmentConfirmation(It.IsAny<Shipment>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(("Subject", "Body"));
 
         _service = new ShipmentService(
             _shipmentRepoMock.Object,
@@ -58,7 +69,10 @@ public class ShipmentServiceTests : IDisposable
             _otpServiceMock.Object,
             _notificationServiceMock.Object,
             _db,
-            _llmServiceMock.Object
+            _llmServiceMock.Object,
+            _loggerMock.Object,
+            _emailServiceMock.Object,
+            _emailTemplateServiceMock.Object
         );
     }
 
@@ -70,28 +84,14 @@ public class ShipmentServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateAsync_InvalidPackageType_ThrowsValidationException()
-    {
-        var request = new CreateShipmentRequest { PackageType = "INVALID", PaymentMethod = "COD" };
-        await Assert.ThrowsAsync<ValidationException>(() => _service.CreateAsync(request, Guid.NewGuid()));
-    }
-
-    [Fact]
-    public async Task CreateAsync_InvalidPaymentMethod_ThrowsValidationException()
-    {
-        var request = new CreateShipmentRequest { PackageType = "SMALL_PARCEL", PaymentMethod = "INVALID" };
-        await Assert.ThrowsAsync<ValidationException>(() => _service.CreateAsync(request, Guid.NewGuid()));
-    }
-
-    [Fact]
     public async Task CreateAsync_CodPayment_CreatesOpenShipmentAndBroadcastsJob()
     {
 
         var customerId = Guid.NewGuid();
         var request = new CreateShipmentRequest 
         { 
-            PackageType = "SMALL_PARCEL", 
-            PaymentMethod = "COD",
+            PackageType = PackageType.SMALL_PARCEL, 
+            PaymentMethod = PaymentMethod.COD,
             PickupAddress = "Salem",
             DropAddress = "Erode",
             WeightKg = 2.5m,
@@ -102,12 +102,11 @@ public class ShipmentServiceTests : IDisposable
             .ReturnsAsync((false, RiskSeverity.NONE, null, null, "Careful Instruction"));
 
         _otpServiceMock.Setup(o => o.GenerateOtp()).Returns("1234");
-        _otpServiceMock.Setup(o => o.GenerateDeterministicOtp(It.IsAny<Guid>(), "receiver")).Returns("5678");
 
         var result = await _service.CreateAsync(request, customerId);
 
         Assert.NotNull(result);
-        Assert.Equal("OPEN", result.Status);
+        Assert.Equal(ShipmentStatus.OPEN, result.Status);
         Assert.Null(result.PaymentUrl);
         Assert.Equal("1234", result.SenderOtp);
 
@@ -121,49 +120,41 @@ public class ShipmentServiceTests : IDisposable
         _notificationServiceMock.Verify(n => n.CreateNotificationAsync(customerId, It.IsAny<Guid>(), "Shipment Created", It.IsAny<string>()), Times.Once);
         _notificationServiceMock.Verify(n => n.BroadcastNewJobAlertAsync("TWO_WHEELER", It.IsAny<object>()), Times.Once);
         _notificationServiceMock.Verify(n => n.BroadcastNewJobAlertAsync("THREE_WHEELER", It.IsAny<object>()), Times.Once);
+        _emailServiceMock.Verify(m => m.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
     public async Task CreateAsync_OnlinePayment_CreatesPendingPaymentShipment()
     {
 
-        var request = new CreateShipmentRequest { PackageType = "SMALL_PARCEL", PaymentMethod = "ONLINE" };
+        var request = new CreateShipmentRequest { PackageType = PackageType.SMALL_PARCEL, PaymentMethod = PaymentMethod.ONLINE };
         _otpServiceMock.Setup(o => o.GenerateOtp()).Returns("1234");
 
         var result = await _service.CreateAsync(request, Guid.NewGuid());
 
-        Assert.Equal("PENDING_PAYMENT", result.Status);
+        _emailServiceMock.Verify(m => m.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+
+        Assert.Equal(ShipmentStatus.PENDING_PAYMENT, result.Status);
         Assert.NotNull(result.PaymentUrl);
     }
 
     [Fact]
-    public async Task GetByIdAsync_NotFound_ThrowsNotFoundException()
+    public async Task GetRawByIdAsync_NotFound_ThrowsNotFoundException()
     {
         var id = Guid.NewGuid();
         _shipmentRepoMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync((Shipment)null!);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => _service.GetByIdAsync(id, Guid.NewGuid(), "CUSTOMER"));
+        await Assert.ThrowsAsync<NotFoundException>(() => _service.GetRawByIdAsync(id));
     }
 
     [Fact]
-    public async Task GetByIdAsync_NotOwnerCustomer_ThrowsForbiddenException()
-    {
-        var id = Guid.NewGuid();
-        var shipment = new Shipment { Id = id, CustomerId = Guid.NewGuid() };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(shipment);
-
-        await Assert.ThrowsAsync<ForbiddenException>(() => _service.GetByIdAsync(id, Guid.NewGuid(), "CUSTOMER"));
-    }
-
-    [Fact]
-    public async Task GetByIdAsync_AuthorizedOwnerCustomer_ReturnsShipment()
+    public async Task GetByIdAsync_ReturnsShipment()
     {
         var id = Guid.NewGuid();
         var customerId = Guid.NewGuid();
         var shipment = new Shipment { Id = id, CustomerId = customerId, OrderId = "TRK-01" };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(shipment);
 
-        var result = await _service.GetByIdAsync(id, customerId, "CUSTOMER");
+        var result = await _service.GetByIdAsync(shipment);
 
         Assert.NotNull(result);
         Assert.Equal("TRK-01", result.OrderId);
@@ -175,11 +166,10 @@ public class ShipmentServiceTests : IDisposable
         var id = Guid.NewGuid();
         var customerId = Guid.NewGuid();
         var shipment = new Shipment { Id = id, CustomerId = customerId, Status = ShipmentStatus.ASSIGNED };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(shipment);
 
         var request = new UpdateShipmentRequest { SpecialNotes = "New Note" };
 
-        await Assert.ThrowsAsync<BusinessRuleException>(() => _service.UpdateAsync(id, request, customerId));
+        await Assert.ThrowsAsync<BusinessRuleException>(() => _service.UpdateAsync(shipment, request));
     }
 
     [Fact]
@@ -188,14 +178,13 @@ public class ShipmentServiceTests : IDisposable
         var id = Guid.NewGuid();
         var customerId = Guid.NewGuid();
         var shipment = new Shipment { Id = id, CustomerId = customerId, Status = ShipmentStatus.OPEN };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(shipment);
 
         _llmServiceMock.Setup(l => l.ParseDeliveryNoteAsync("New Notes"))
             .ReturnsAsync((true, RiskSeverity.HIGH, "unattended", null, "New Instr"));
 
         var request = new UpdateShipmentRequest { SpecialNotes = "New Notes" };
 
-        await _service.UpdateAsync(id, request, customerId);
+        await _service.UpdateAsync(shipment, request);
 
         Assert.Equal("New Notes", shipment.SpecialNotes);
         Assert.True(shipment.RiskFlag);
@@ -209,9 +198,8 @@ public class ShipmentServiceTests : IDisposable
         var id = Guid.NewGuid();
         var customerId = Guid.NewGuid();
         var shipment = new Shipment { Id = id, CustomerId = customerId, Status = ShipmentStatus.ASSIGNED };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(shipment);
 
-        await Assert.ThrowsAsync<BusinessRuleException>(() => _service.CancelAsync(id, customerId));
+        await Assert.ThrowsAsync<BusinessRuleException>(() => _service.CancelAsync(shipment, customerId));
     }
 
     [Fact]
@@ -220,11 +208,10 @@ public class ShipmentServiceTests : IDisposable
         var id = Guid.NewGuid();
         var customerId = Guid.NewGuid();
         var shipment = new Shipment { Id = id, CustomerId = customerId, Status = ShipmentStatus.OPEN };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(shipment);
 
-        var result = await _service.CancelAsync(id, customerId);
+        var result = await _service.CancelAsync(shipment, customerId);
 
-        Assert.Equal("CANCELLED", result.Status);
+        Assert.Equal(ShipmentStatus.CANCELLED, result.Status);
         Assert.True(result.RefundInitiated);
         Assert.Equal(ShipmentStatus.CANCELLED, shipment.Status);
     }
@@ -265,7 +252,7 @@ public class ShipmentServiceTests : IDisposable
         var result = await _service.ClaimAsync(shipmentId, driverUserId);
 
         Assert.NotNull(result);
-        Assert.Equal("ASSIGNED", result.Status);
+        Assert.Equal(ShipmentStatus.ASSIGNED, result.Status);
         Assert.Equal(driverId, shipment.DriverId);
         Assert.Equal(vehicleId, shipment.VehicleId);
         Assert.Equal(ShipmentStatus.ASSIGNED, shipment.Status);
@@ -286,14 +273,13 @@ public class ShipmentServiceTests : IDisposable
 
         var shipmentId = Guid.NewGuid();
         var shipment = new Shipment { Id = shipmentId, OrderId = "TRK-01", DriverId = driverId, Status = ShipmentStatus.ASSIGNED };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
         var request = new CancelClaimRequest { Reason = "Breakdown" };
 
-        var result = await _service.CancelClaimAsync(shipmentId, driverUserId, request);
+        var result = await _service.CancelClaimAsync(shipment, driverUserId, request);
 
         Assert.NotNull(result);
-        Assert.Equal("OPEN", result.Status);
+        Assert.Equal(ShipmentStatus.OPEN, result.Status);
         Assert.Equal(2, result.DriverCancelCount);
 
         Assert.Null(shipment.DriverId);
@@ -324,13 +310,12 @@ public class ShipmentServiceTests : IDisposable
             SenderOtpExpiresAt = DateTime.UtcNow.AddMinutes(10),
             SenderOtpAttempts = 0
         };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
         _otpServiceMock.Setup(o => o.VerifyOtp("1111", "hash")).Returns(false);
 
         var request = new ConfirmPickupRequest { Otp = "1111" };
 
-        await Assert.ThrowsAsync<ValidationException>(() => _service.ConfirmPickupAsync(shipmentId, driverUserId, request));
+        await Assert.ThrowsAsync<ValidationException>(() => _service.ConfirmPickupAsync(shipment, driverUserId, request));
         Assert.Equal(1, shipment.SenderOtpAttempts);
         _shipmentRepoMock.Verify(r => r.UpdateAsync(shipment), Times.Once);
     }
@@ -354,16 +339,15 @@ public class ShipmentServiceTests : IDisposable
             SenderOtpExpiresAt = DateTime.UtcNow.AddMinutes(10),
             SenderOtpAttempts = 0
         };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
         _otpServiceMock.Setup(o => o.VerifyOtp("1234", "hash")).Returns(true);
 
         var request = new ConfirmPickupRequest { Otp = "1234" };
 
-        var result = await _service.ConfirmPickupAsync(shipmentId, driverUserId, request);
+        var result = await _service.ConfirmPickupAsync(shipment, driverUserId, request);
 
         Assert.NotNull(result);
-        Assert.Equal("IN_TRANSIT", result.Status);
+        Assert.Equal(ShipmentStatus.IN_TRANSIT, result.Status);
         Assert.Equal(ShipmentStatus.IN_TRANSIT, shipment.Status);
         _notificationServiceMock.Verify(n => n.CreateNotificationAsync(shipment.CustomerId, shipmentId, "Package Picked Up", It.IsAny<string>()), Times.Once);
     }
@@ -386,13 +370,12 @@ public class ShipmentServiceTests : IDisposable
             DropLat = 11.0m,
             DropLng = 78.0m
         };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
         _geoServiceMock.Setup(g => g.CalculateDistance(11.005m, 78.0m, 11.0m, 78.0m)).Returns(0.5);
 
         var request = new ConfirmDeliveryRequest { Otp = "5678", DriverLat = 11.005m, DriverLng = 78.0m };
 
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => _service.ConfirmDeliveryAsync(shipmentId, driverUserId, request));
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => _service.ConfirmDeliveryAsync(shipment, driverUserId, request));
         Assert.Equal("Driver is not within 200m of the delivery location.", ex.Message);
     }
 
@@ -416,17 +399,16 @@ public class ShipmentServiceTests : IDisposable
             ReceiverOtpHash = "hash",
             ReceiverOtpExpiresAt = DateTime.UtcNow.AddMinutes(10)
         };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
         _geoServiceMock.Setup(g => g.CalculateDistance(11.0001m, 78.0m, 11.0m, 78.0m)).Returns(0.01);
         _otpServiceMock.Setup(o => o.VerifyOtp("5678", "hash")).Returns(true);
 
         var request = new ConfirmDeliveryRequest { Otp = "5678", DriverLat = 11.0001m, DriverLng = 78.0m };
 
-        var result = await _service.ConfirmDeliveryAsync(shipmentId, driverUserId, request);
+        var result = await _service.ConfirmDeliveryAsync(shipment, driverUserId, request);
 
         Assert.NotNull(result);
-        Assert.Equal("DELIVERED", result.Status);
+        Assert.Equal(ShipmentStatus.DELIVERED, result.Status);
         Assert.Equal(ShipmentStatus.DELIVERED, shipment.Status);
         _notificationServiceMock.Verify(n => n.CreateNotificationAsync(shipment.CustomerId, shipmentId, "Package Delivered", It.IsAny<string>()), Times.Once);
     }
@@ -457,59 +439,13 @@ public class ShipmentServiceTests : IDisposable
         };
 
         _shipmentRepoMock.Setup(r => r.GetByPublicTrackParamsAsync("TRK-01", "9876543210")).ReturnsAsync(shipment);
-        _otpServiceMock.Setup(o => o.GenerateDeterministicOtp(shipmentId, "receiver")).Returns("5678");
 
         var result = await _service.GetPublicTrackingAsync("TRK-01", "9876543210", "2026-06-15");
 
         Assert.NotNull(result);
         Assert.Equal("TRK-01", result.OrderId);
-        Assert.Equal("5678", result.ReceiverOtp);
-        Assert.Equal("OPEN", result.Status);
+        Assert.Equal(ShipmentStatus.OPEN, result.Status);
         Assert.True(result.Timeline.Count > 0);
-    }
-
-    [Fact]
-    public async Task GetByIdAsync_AdminRole_ReturnsShipment()
-    {
-        var id = Guid.NewGuid();
-        var shipment = new Shipment { Id = id, CustomerId = Guid.NewGuid(), OrderId = "TRK-ADMIN" };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(shipment);
-
-        var result = await _service.GetByIdAsync(id, Guid.NewGuid(), "ADMIN");
-
-        Assert.NotNull(result);
-        Assert.Equal("TRK-ADMIN", result.OrderId);
-    }
-
-    [Fact]
-    public async Task GetByIdAsync_DriverAssigned_ReturnsShipment()
-    {
-        var id = Guid.NewGuid();
-        var driverId = Guid.NewGuid();
-        var driverUserId = Guid.NewGuid();
-        var shipment = new Shipment { Id = id, CustomerId = Guid.NewGuid(), DriverId = driverId, OrderId = "TRK-DRIVER" };
-        
-        var driver = new Driver { Id = driverId, UserId = driverUserId };
-        _driverRepoMock.Setup(r => r.GetByUserIdAsync(driverUserId)).ReturnsAsync(driver);
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(shipment);
-
-        var result = await _service.GetByIdAsync(id, driverUserId, "DRIVER");
-
-        Assert.NotNull(result);
-        Assert.Equal("TRK-DRIVER", result.OrderId);
-    }
-
-    [Fact]
-    public async Task UpdateAsync_InvalidPreferredWindow_ThrowsValidationException()
-    {
-        var id = Guid.NewGuid();
-        var customerId = Guid.NewGuid();
-        var shipment = new Shipment { Id = id, CustomerId = customerId, Status = ShipmentStatus.OPEN };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(shipment);
-
-        var request = new UpdateShipmentRequest { PreferredWindow = "INVALID" };
-
-        await Assert.ThrowsAsync<ValidationException>(() => _service.UpdateAsync(id, request, customerId));
     }
 
     [Fact]
@@ -518,11 +454,10 @@ public class ShipmentServiceTests : IDisposable
         var id = Guid.NewGuid();
         var customerId = Guid.NewGuid();
         var shipment = new Shipment { Id = id, CustomerId = customerId, Status = ShipmentStatus.OPEN, SpecialNotes = "Note", DriverInstruction = "Instr" };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(shipment);
 
         var request = new UpdateShipmentRequest { SpecialNotes = "" };
 
-        await _service.UpdateAsync(id, request, customerId);
+        await _service.UpdateAsync(shipment, request);
 
         Assert.Empty(shipment.SpecialNotes);
         Assert.False(shipment.RiskFlag);
@@ -535,28 +470,13 @@ public class ShipmentServiceTests : IDisposable
         var id = Guid.NewGuid();
         var customerId = Guid.NewGuid();
         var shipment = new Shipment { Id = id, CustomerId = customerId, Status = ShipmentStatus.OPEN };
-        
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(shipment);
 
-        var result = await _service.CancelAsync(id, customerId);
+        var result = await _service.CancelAsync(shipment, customerId);
 
-        Assert.Equal("CANCELLED", result.Status);
+        Assert.Equal(ShipmentStatus.CANCELLED, result.Status);
         Assert.True(result.RefundInitiated);
     }
 
-    [Fact]
-    public async Task GetShipmentsAsync_NotAuthorized_ThrowsForbiddenException()
-    {
-        await Assert.ThrowsAsync<ForbiddenException>(() => 
-            _service.GetShipmentsAsync(Guid.NewGuid(), "DRIVER", null, null, null, null, 1, 20));
-    }
-
-    [Fact]
-    public async Task GetShipmentsAsync_InvalidStatusFilter_ThrowsValidationException()
-    {
-        await Assert.ThrowsAsync<ValidationException>(() => 
-            _service.GetShipmentsAsync(Guid.NewGuid(), "CUSTOMER", null, "INVALID", null, null, 1, 20));
-    }
 
     [Fact]
     public async Task GetShipmentsAsync_ValidCustomer_ReturnsCustomerShipments()
@@ -610,11 +530,10 @@ public class ShipmentServiceTests : IDisposable
 
         var shipmentId = Guid.NewGuid();
         var shipment = new Shipment { Id = shipmentId, DriverId = driverId, Status = ShipmentStatus.ASSIGNED, Customer = new User() };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
         var request = new CancelClaimRequest { Reason = "Reason" };
 
-        var result = await _service.CancelClaimAsync(shipmentId, driverUserId, request);
+        var result = await _service.CancelClaimAsync(shipment, driverUserId, request);
 
         Assert.Equal(3, result.DriverCancelCount);
         _notificationServiceMock.Verify(n => n.BroadcastAdminAlertAsync("HIGH_CANCEL_COUNT", It.IsAny<object>()), Times.Once);
@@ -636,11 +555,10 @@ public class ShipmentServiceTests : IDisposable
             Status = ShipmentStatus.ASSIGNED,
             SenderOtpExpiresAt = DateTime.UtcNow.AddMinutes(-5)
         };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
         var request = new ConfirmPickupRequest { Otp = "1234" };
 
-        await Assert.ThrowsAsync<ValidationException>(() => _service.ConfirmPickupAsync(shipmentId, driverUserId, request));
+        await Assert.ThrowsAsync<ValidationException>(() => _service.ConfirmPickupAsync(shipment, driverUserId, request));
     }
 
     [Fact]
@@ -660,11 +578,10 @@ public class ShipmentServiceTests : IDisposable
             SenderOtpExpiresAt = DateTime.UtcNow.AddMinutes(5),
             SenderOtpAttempts = 3
         };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
         var request = new ConfirmPickupRequest { Otp = "1234" };
 
-        await Assert.ThrowsAsync<TooManyRequestsException>(() => _service.ConfirmPickupAsync(shipmentId, driverUserId, request));
+        await Assert.ThrowsAsync<TooManyRequestsException>(() => _service.ConfirmPickupAsync(shipment, driverUserId, request));
     }
 
     [Fact]
@@ -685,12 +602,11 @@ public class ShipmentServiceTests : IDisposable
             SenderOtpExpiresAt = DateTime.UtcNow.AddMinutes(5),
             SenderOtpAttempts = 2
         };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
         _otpServiceMock.Setup(o => o.VerifyOtp("1111", "hash")).Returns(false);
 
         var request = new ConfirmPickupRequest { Otp = "1111" };
 
-        await Assert.ThrowsAsync<TooManyRequestsException>(() => _service.ConfirmPickupAsync(shipmentId, driverUserId, request));
+        await Assert.ThrowsAsync<TooManyRequestsException>(() => _service.ConfirmPickupAsync(shipment, driverUserId, request));
         Assert.Equal(3, shipment.SenderOtpAttempts);
         _notificationServiceMock.Verify(n => n.BroadcastAdminAlertAsync("OTP_BLOCKED", It.IsAny<object>()), Times.Once);
     }
@@ -713,12 +629,11 @@ public class ShipmentServiceTests : IDisposable
             DropLng = 78.0m,
             ReceiverOtpExpiresAt = DateTime.UtcNow.AddMinutes(-5)
         };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
         _geoServiceMock.Setup(g => g.CalculateDistance(11.0m, 78.0m, 11.0m, 78.0m)).Returns(0.0);
 
         var request = new ConfirmDeliveryRequest { Otp = "5678", DriverLat = 11.0m, DriverLng = 78.0m };
 
-        await Assert.ThrowsAsync<ValidationException>(() => _service.ConfirmDeliveryAsync(shipmentId, driverUserId, request));
+        await Assert.ThrowsAsync<ValidationException>(() => _service.ConfirmDeliveryAsync(shipment, driverUserId, request));
     }
 
     [Fact]
@@ -740,12 +655,11 @@ public class ShipmentServiceTests : IDisposable
             ReceiverOtpExpiresAt = DateTime.UtcNow.AddMinutes(5),
             ReceiverOtpAttempts = 3
         };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
         _geoServiceMock.Setup(g => g.CalculateDistance(11.0m, 78.0m, 11.0m, 78.0m)).Returns(0.0);
 
         var request = new ConfirmDeliveryRequest { Otp = "5678", DriverLat = 11.0m, DriverLng = 78.0m };
 
-        await Assert.ThrowsAsync<TooManyRequestsException>(() => _service.ConfirmDeliveryAsync(shipmentId, driverUserId, request));
+        await Assert.ThrowsAsync<TooManyRequestsException>(() => _service.ConfirmDeliveryAsync(shipment, driverUserId, request));
     }
 
     [Fact]
@@ -768,13 +682,12 @@ public class ShipmentServiceTests : IDisposable
             ReceiverOtpExpiresAt = DateTime.UtcNow.AddMinutes(5),
             ReceiverOtpAttempts = 2
         };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
         _geoServiceMock.Setup(g => g.CalculateDistance(11.0m, 78.0m, 11.0m, 78.0m)).Returns(0.0);
         _otpServiceMock.Setup(o => o.VerifyOtp("1111", "hash")).Returns(false);
 
         var request = new ConfirmDeliveryRequest { Otp = "1111", DriverLat = 11.0m, DriverLng = 78.0m };
 
-        await Assert.ThrowsAsync<TooManyRequestsException>(() => _service.ConfirmDeliveryAsync(shipmentId, driverUserId, request));
+        await Assert.ThrowsAsync<TooManyRequestsException>(() => _service.ConfirmDeliveryAsync(shipment, driverUserId, request));
         Assert.Equal(3, shipment.ReceiverOtpAttempts);
         _notificationServiceMock.Verify(n => n.BroadcastAdminAlertAsync("OTP_BLOCKED", It.IsAny<object>()), Times.Once);
     }
@@ -789,9 +702,8 @@ public class ShipmentServiceTests : IDisposable
 
         var shipmentId = Guid.NewGuid();
         var shipment = new Shipment { Id = shipmentId, DriverId = driverId, Status = ShipmentStatus.DELIVERED, CashCollected = false };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
-        var result = await _service.ConfirmCashCollectedAsync(shipmentId, driverUserId);
+        var result = await _service.ConfirmCashCollectedAsync(shipment, driverUserId);
 
         Assert.NotNull(result);
         Assert.True(result.CashCollected);
@@ -809,14 +721,13 @@ public class ShipmentServiceTests : IDisposable
 
         var shipmentId = Guid.NewGuid();
         var shipment = new Shipment { Id = shipmentId, DriverId = driverId, Status = ShipmentStatus.ASSIGNED, CustomerId = Guid.NewGuid(), OrderId = "TRK-01" };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
         var request = new PickupFailedRequest { Reason = "No show" };
 
-        var result = await _service.MarkPickupFailedAsync(shipmentId, driverUserId, request);
+        var result = await _service.MarkPickupFailedAsync(shipment, driverUserId, request);
 
         Assert.NotNull(result);
-        Assert.Equal("PICKUP_FAILED", result.Status);
+        Assert.Equal(ShipmentStatus.PICKUP_FAILED, result.Status);
         Assert.Equal(ShipmentStatus.PICKUP_FAILED, shipment.Status);
 
         _shipmentRepoMock.Verify(r => r.UpdateAsync(shipment), Times.Once);

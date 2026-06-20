@@ -114,8 +114,6 @@ public class CurrentUserTests : IDisposable
         Assert.Equal(user.Id, result);
         Assert.True(_items.ContainsKey("DbUserId"));
         Assert.Equal(user.Id, _items["DbUserId"]);
-        Assert.True(_items.ContainsKey("DbUserRole"));
-        Assert.Equal("CUSTOMER", _items["DbUserRole"]);
     }
 
     [Fact]
@@ -140,7 +138,7 @@ public class CurrentUserTests : IDisposable
     }
 
     [Fact]
-    public void Role_NotAuthenticated_ReturnsDefaultCustomer()
+    public void Role_NotAuthenticated_ReturnsEmptyString()
     {
 
         var identity = new ClaimsIdentity();
@@ -151,29 +149,15 @@ public class CurrentUserTests : IDisposable
 
         var result = currentUser.Role;
 
-        Assert.Equal("CUSTOMER", result);
+        Assert.Equal(string.Empty, result);
     }
 
     [Fact]
-    public void Role_AuthenticatedAndUserExists_ReturnsUppercaseRoleAndCaches()
+    public void Role_AuthenticatedWithClaim_ReturnsRoleFromClaim()
     {
-
-        var auth0Id = "auth0|existing_driver";
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Auth0Id = auth0Id,
-            FullName = "Test Driver",
-            Email = "driver@example.com",
-            Phone = "1234567890",
-            Role = UserRole.DRIVER
-        };
-        _db.Users.Add(user);
-        _db.SaveChanges();
-
         var identity = new ClaimsIdentity(new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, auth0Id)
+            new Claim("https://logistics.api/claims/roles", "DRIVER")
         }, "TestAuth");
         var principal = new ClaimsPrincipal(identity);
         _httpContextMock.Setup(c => c.User).Returns(principal);
@@ -183,27 +167,7 @@ public class CurrentUserTests : IDisposable
         var result = currentUser.Role;
 
         Assert.Equal("DRIVER", result);
-        Assert.True(_items.ContainsKey("DbUserRole"));
-        Assert.Equal("DRIVER", _items["DbUserRole"]);
     }
 
-    [Fact]
-    public void Role_CachedInItems_ReturnsCachedRole()
-    {
 
-        _items["DbUserRole"] = "ADMIN";
-
-        var identity = new ClaimsIdentity(new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, "auth0|admin")
-        }, "TestAuth");
-        var principal = new ClaimsPrincipal(identity);
-        _httpContextMock.Setup(c => c.User).Returns(principal);
-
-        var currentUser = new CurrentUser(_httpContextAccessorMock.Object, _db);
-
-        var result = currentUser.Role;
-
-        Assert.Equal("ADMIN", result);
-    }
 }

@@ -103,19 +103,18 @@ public class NotificationService : INotificationService
         };
     }
 
-    public async Task<MarkReadResponse> MarkAsReadAsync(Guid id, Guid userId)
+    public async Task<Notification> GetRawByIdAsync(Guid id)
     {
         var notification = await _notificationRepo.GetByIdAsync(id);
         if (notification == null)
         {
             throw new NotFoundException("Notification not found.");
         }
+        return notification;
+    }
 
-        if (notification.UserId != userId)
-        {
-            throw new ForbiddenException("You are not authorized to mark this notification as read.");
-        }
-
+    public async Task<MarkReadResponse> MarkAsReadAsync(Notification notification)
+    {
         notification.IsRead = true;
         await _notificationRepo.UpdateAsync(notification);
 

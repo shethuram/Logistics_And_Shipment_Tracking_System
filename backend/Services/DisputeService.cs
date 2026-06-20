@@ -31,33 +31,22 @@ public class DisputeService : IDisputeService
         _db = db;
     }
 
-    public async Task<RaiseDisputeResponse> RaiseDisputeAsync(RaiseDisputeRequest request, Guid customerId)
+    public async Task<RaiseDisputeResponse> RaiseDisputeAsync(Shipment shipment, string complaintText, Guid customerId)
     {
-        var shipment = await _shipmentRepo.GetByIdAsync(request.ShipmentId);
-        if (shipment == null)
-        {
-            throw new NotFoundException("Shipment not found.");
-        }
-
-        if (shipment.CustomerId != customerId)
-        {
-            throw new ForbiddenException("You are not authorized to raise a dispute for this shipment.");
-        }
-
-        var exists = await _db.Disputes.AnyAsync(d => d.ShipmentId == request.ShipmentId);
+        var exists = await _db.Disputes.AnyAsync(d => d.ShipmentId == shipment.Id);
         if (exists)
         {
             throw new ConflictException("A dispute has already been raised for this shipment.");
         }
 
-        var (summary, type, suggestedResolution) = await _llmService.AnalyzeDisputeAsync(request.ComplaintText);
+        var (summary, type, suggestedResolution) = await _llmService.AnalyzeDisputeAsync(complaintText);
 
         var dispute = new Dispute
         {
             Id = Guid.NewGuid(),
-            ShipmentId = request.ShipmentId,
+            ShipmentId = shipment.Id,
             RaisedBy = customerId,
-            ComplaintText = request.ComplaintText,
+            ComplaintText = complaintText,
             LlmSummary = summary,
             LlmType = type,
             LlmSuggestedResolution = suggestedResolution,
@@ -72,25 +61,9 @@ public class DisputeService : IDisputeService
         return dispute.ToRaiseDisputeResponse();
     }
 
-    public async Task<PagedResult<DisputeAdminDto>> GetDisputesAsync(string? status, int page, int pageSize, string role)
+    public async Task<PagedResult<DisputeAdminDto>> GetDisputesAsync(DisputeStatus? status, int page, int pageSize)
     {
-        if (role != "ADMIN")
-        {
-            throw new ForbiddenException("Only admins can view disputes.");
-        }
-
-        DisputeStatus? ds = null;
-        if (!string.IsNullOrEmpty(status))
-        {
-            if (Enum.TryParse<DisputeStatus>(status, out var parsedStatus))
-            {
-                ds = parsedStatus;
-            }
-            else
-            {
-                throw new ValidationException($"Invalid dispute status: {status}");
-            }
-        }
+        var ds = status;
 
         var (items, total) = await _disputeRepo.GetDisputesAsync(ds, page, pageSize);
 
@@ -103,13 +76,8 @@ public class DisputeService : IDisputeService
         };
     }
 
-    public async Task<ResolveDisputeResponse> ResolveDisputeAsync(Guid id, ResolveDisputeRequest request, Guid adminUserId, string role)
+    public async Task<ResolveDisputeResponse> ResolveDisputeAsync(Guid id, ResolveDisputeRequest request, Guid adminUserId)
     {
-        if (role != "ADMIN")
-        {
-            throw new ForbiddenException("Only admins can resolve disputes.");
-        }
-
         var dispute = await _disputeRepo.GetByIdAsync(id);
         if (dispute == null)
         {
@@ -121,13 +89,12 @@ public class DisputeService : IDisputeService
             throw new BusinessRuleException("Dispute is already resolved.");
         }
 
-        if (!Enum.TryParse<DisputeStatus>(request.Status, out var targetStatus) || 
-            (targetStatus != DisputeStatus.RESOLVED && targetStatus != DisputeStatus.ESCALATED))
+        if (request.Status != DisputeStatus.RESOLVED && request.Status != DisputeStatus.ESCALATED)
         {
             throw new ValidationException($"Invalid resolution status: {request.Status}. Status must be RESOLVED or ESCALATED.");
         }
 
-        dispute.Status = targetStatus;
+        dispute.Status = request.Status;
         dispute.ResolvedBy = adminUserId;
         dispute.ResolutionNotes = request.ResolutionNotes;
         dispute.ResolvedAt = DateTime.UtcNow;

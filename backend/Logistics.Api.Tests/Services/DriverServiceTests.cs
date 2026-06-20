@@ -124,8 +124,8 @@ public class DriverServiceTests
         var result = await _driverService.GoOnlineAsync(driverId, request);
 
         Assert.NotNull(result);
-        Assert.Equal("ONLINE", result.OperationalStatus);
-        Assert.Equal("FOUR_WHEELER", result.ActiveVehicleType);
+        Assert.Equal(OperationalStatus.ONLINE, result.OperationalStatus);
+        Assert.Equal(VehicleType.FOUR_WHEELER, result.ActiveVehicleType);
 
         Assert.Equal(OperationalStatus.ONLINE, driver.OperationalStatus);
         Assert.Equal(12.3456m, driver.CurrentLat);
@@ -161,7 +161,7 @@ public class DriverServiceTests
         var result = await _driverService.GoOfflineAsync(driverId);
 
         Assert.NotNull(result);
-        Assert.Equal("OFFLINE", result.OperationalStatus);
+        Assert.Equal(OperationalStatus.OFFLINE, result.OperationalStatus);
         Assert.Equal(OperationalStatus.OFFLINE, driver.OperationalStatus);
 
         _driverRepoMock.Verify(r => r.UpdateAsync(driver), Times.Once);

@@ -54,18 +54,8 @@ public class DriverVehicleServiceTests
         var result = await _service.GetVehiclesAsync(driverId);
 
         Assert.Single(result);
-        Assert.Equal("TWO_WHEELER", result[0].VehicleType);
+        Assert.Equal(VehicleType.TWO_WHEELER, result[0].VehicleType);
         Assert.Equal("V1", result[0].VehicleNumber);
-    }
-
-    [Fact]
-    public async Task AddVehicleAsync_InvalidVehicleType_ThrowsValidationException()
-    {
-        var driverId = Guid.NewGuid();
-        SetupDriverExists(driverId);
-        var request = new AddVehicleRequest { VehicleType = "INVALID", VehicleNumber = "V1" };
-
-        await Assert.ThrowsAsync<ValidationException>(() => _service.AddVehicleAsync(driverId, request));
     }
 
     [Fact]
@@ -74,7 +64,7 @@ public class DriverVehicleServiceTests
         var driverId = Guid.NewGuid();
         SetupDriverExists(driverId);
         _vehicleRepoMock.Setup(r => r.ExistsByNumberForDriverAsync(driverId, "V1")).ReturnsAsync(true);
-        var request = new AddVehicleRequest { VehicleType = "TWO_WHEELER", VehicleNumber = "V1" };
+        var request = new AddVehicleRequest { VehicleType = VehicleType.TWO_WHEELER, VehicleNumber = "V1" };
 
         await Assert.ThrowsAsync<ConflictException>(() => _service.AddVehicleAsync(driverId, request));
     }
@@ -85,12 +75,12 @@ public class DriverVehicleServiceTests
         var driverId = Guid.NewGuid();
         SetupDriverExists(driverId);
         _vehicleRepoMock.Setup(r => r.ExistsByNumberForDriverAsync(driverId, "V1")).ReturnsAsync(false);
-        var request = new AddVehicleRequest { VehicleType = "TWO_WHEELER", VehicleNumber = "V1" };
+        var request = new AddVehicleRequest { VehicleType = VehicleType.TWO_WHEELER, VehicleNumber = "V1" };
 
         var result = await _service.AddVehicleAsync(driverId, request);
 
         Assert.NotNull(result);
-        Assert.Equal("TWO_WHEELER", result.VehicleType);
+        Assert.Equal(VehicleType.TWO_WHEELER, result.VehicleType);
         Assert.Equal("V1", result.VehicleNumber);
         _vehicleRepoMock.Verify(r => r.AddAsync(It.IsAny<Vehicle>()), Times.Once);
     }
@@ -129,12 +119,12 @@ public class DriverVehicleServiceTests
         SetupDriverExists(driverId);
         var vehicle = new Vehicle { Id = vehicleId, DriverId = driverId, VehicleNumber = "V1", VehicleType = VehicleType.TWO_WHEELER };
         _vehicleRepoMock.Setup(r => r.GetByIdAsync(vehicleId)).ReturnsAsync(vehicle);
-        var request = new UpdateVehicleRequest { VehicleNumber = "V2", VehicleType = "THREE_WHEELER" };
+        var request = new UpdateVehicleRequest { VehicleNumber = "V2", VehicleType = VehicleType.THREE_WHEELER };
 
         var result = await _service.UpdateVehicleAsync(driverId, vehicleId, request);
 
         Assert.Equal("V2", result.VehicleNumber);
-        Assert.Equal("THREE_WHEELER", result.VehicleType);
+        Assert.Equal(VehicleType.THREE_WHEELER, result.VehicleType);
         _vehicleRepoMock.Verify(r => r.UpdateAsync(vehicle), Times.Once);
     }
 

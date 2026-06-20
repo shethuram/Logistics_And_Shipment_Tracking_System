@@ -9,13 +9,13 @@ public static class UserMappings
     {
         Id = user.Id,
         FullName = user.FullName,
-        Role = user.Role.ToString()
+        Role = user.Role
     };
 
     public static RegisterDriverResponse ToRegisterDriverResponse(this User user, Driver driver) => new()
     {
         Id = user.Id,
         FullName = user.FullName,
-        ApprovalStatus = driver.ApprovalStatus.ToString()
+        ApprovalStatus = driver.ApprovalStatus
     };
 }

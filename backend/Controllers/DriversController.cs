@@ -1,5 +1,6 @@
 using Logistics.Api.DTOs;
 using Logistics.Api.Exceptions;
+using Logistics.Api.Interfaces.Repositories;
 using Logistics.Api.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,36 +8,38 @@ using Microsoft.AspNetCore.Mvc;
 namespace Logistics.Api.Controllers;
 
 [ApiController]
-[Route("api/drivers/{id:guid}")]
+[Route("api/drivers")]
 [Authorize(Roles = "DRIVER")]
 public class DriversController : ControllerBase
 {
     private readonly IDriverService _driverService;
+    private readonly IDriverRepository _driverRepo;
     private readonly ICurrentUser _currentUser;
 
-    public DriversController(IDriverService driverService, ICurrentUser currentUser)
+    public DriversController(IDriverService driverService, IDriverRepository driverRepo, ICurrentUser currentUser)
     {
         _driverService = driverService;
+        _driverRepo = driverRepo;
         _currentUser = currentUser;
     }
 
     [HttpPost("go-online")]
-    public async Task<IActionResult> GoOnline(Guid id, GoOnlineRequest request)
+    public async Task<IActionResult> GoOnline(GoOnlineRequest request)
     {
-        if (id != _currentUser.Id)
-            throw new ForbiddenException("You are not authorized to modify this driver's profile.");
+        var driver = await _driverRepo.GetByUserIdAsync(_currentUser.Id);
+        if (driver == null) throw new NotFoundException("Driver profile not found.");
 
-        var result = await _driverService.GoOnlineAsync(id, request);
+        var result = await _driverService.GoOnlineAsync(driver.Id, request);
         return Ok(result);
     }
 
     [HttpPost("go-offline")]
-    public async Task<IActionResult> GoOffline(Guid id)
+    public async Task<IActionResult> GoOffline()
     {
-        if (id != _currentUser.Id)
-            throw new ForbiddenException("You are not authorized to modify this driver's profile.");
+        var driver = await _driverRepo.GetByUserIdAsync(_currentUser.Id);
+        if (driver == null) throw new NotFoundException("Driver profile not found.");
 
-        var result = await _driverService.GoOfflineAsync(id);
+        var result = await _driverService.GoOfflineAsync(driver.Id);
         return Ok(result);
     }
 }

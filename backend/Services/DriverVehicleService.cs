@@ -30,15 +30,13 @@ public class DriverVehicleService : IDriverVehicleService
     {
         await EnsureDriverExistsAsync(driverId);
 
-        var vehicleType = ParseVehicleType(request.VehicleType);
-
         if (await _vehicleRepo.ExistsByNumberForDriverAsync(driverId, request.VehicleNumber))
             throw new ConflictException("A vehicle with this number already exists for this driver.");
 
         var vehicle = new Vehicle
         {
             DriverId = driverId,
-            VehicleType = vehicleType,
+            VehicleType = request.VehicleType,
             VehicleNumber = request.VehicleNumber
         };
 
@@ -52,7 +50,7 @@ public class DriverVehicleService : IDriverVehicleService
         var vehicle = await GetOwnedVehicleAsync(driverId, vehicleId);
 
         if (request.VehicleType is not null)
-            vehicle.VehicleType = ParseVehicleType(request.VehicleType);
+            vehicle.VehicleType = request.VehicleType.Value;
 
         if (request.VehicleNumber is not null)
         {
@@ -95,10 +93,4 @@ public class DriverVehicleService : IDriverVehicleService
         return vehicle;
     }
 
-    private static VehicleType ParseVehicleType(string value)
-    {
-        if (!Enum.TryParse<VehicleType>(value, ignoreCase: false, out var parsed) || !Enum.IsDefined(parsed))
-            throw new ValidationException($"Invalid vehicle type '{value}'.");
-        return parsed;
-    }
 }

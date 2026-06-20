@@ -1,12 +1,13 @@
 using System;
+using Logistics.Api.Models;
 
 namespace Logistics.Api.DTOs;
 
 public record ReassignShipmentResponse
 {
     public Guid Id { get; init; }
-    public string Status { get; init; } = "OPEN";
-    public Guid? DriverId { get; init; } = null;
+    public ShipmentStatus Status { get; init; }
+    public Guid? DriverId { get; init; }
 }
 
 public record AdminMetricsResponse

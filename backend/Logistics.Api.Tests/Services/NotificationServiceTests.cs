@@ -153,33 +153,34 @@ public class NotificationServiceTests
     }
 
     [Fact]
-    public async Task MarkAsReadAsync_NotificationNotFound_ThrowsNotFoundException()
+    public async Task GetRawByIdAsync_NotificationNotFound_ThrowsNotFoundException()
     {
         var notifId = Guid.NewGuid();
         _notificationRepoMock.Setup(r => r.GetByIdAsync(notifId)).ReturnsAsync((Notification)null!);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => _service.MarkAsReadAsync(notifId, Guid.NewGuid()));
+        await Assert.ThrowsAsync<NotFoundException>(() => _service.GetRawByIdAsync(notifId));
     }
 
     [Fact]
-    public async Task MarkAsReadAsync_NotAuthorizedUser_ThrowsForbiddenException()
+    public async Task GetRawByIdAsync_NotificationFound_ReturnsNotification()
     {
         var notifId = Guid.NewGuid();
         var notification = new Notification { Id = notifId, UserId = Guid.NewGuid() };
         _notificationRepoMock.Setup(r => r.GetByIdAsync(notifId)).ReturnsAsync(notification);
 
-        await Assert.ThrowsAsync<ForbiddenException>(() => _service.MarkAsReadAsync(notifId, Guid.NewGuid()));
+        var result = await _service.GetRawByIdAsync(notifId);
+
+        Assert.Equal(notification, result);
     }
 
     [Fact]
-    public async Task MarkAsReadAsync_AuthorizedUser_MarksReadAndUpdates()
+    public async Task MarkAsReadAsync_MarksReadAndUpdates()
     {
         var notifId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var notification = new Notification { Id = notifId, UserId = userId, IsRead = false };
-        _notificationRepoMock.Setup(r => r.GetByIdAsync(notifId)).ReturnsAsync(notification);
 
-        var result = await _service.MarkAsReadAsync(notifId, userId);
+        var result = await _service.MarkAsReadAsync(notification);
 
         Assert.NotNull(result);
         Assert.True(result.IsRead);

@@ -2,6 +2,8 @@ using Logistics.Api.DTOs;
 using Logistics.Api.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Logistics.Api.Exceptions;
+using Logistics.Api.Models;
 
 namespace Logistics.Api.Controllers;
 
@@ -12,11 +14,16 @@ public class ShipmentsController : ControllerBase
 {
     private readonly IShipmentService _shipmentService;
     private readonly ICurrentUser _currentUser;
+    private readonly IAuthorizationService _authorizationService;
 
-    public ShipmentsController(IShipmentService shipmentService, ICurrentUser currentUser)
+    public ShipmentsController(
+        IShipmentService shipmentService,
+        ICurrentUser currentUser,
+        IAuthorizationService authorizationService)
     {
         _shipmentService = shipmentService;
         _currentUser = currentUser;
+        _authorizationService = authorizationService;
     }
 
     [HttpPost]
@@ -30,7 +37,14 @@ public class ShipmentsController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
-        var result = await _shipmentService.GetByIdAsync(id, _currentUser.Id, _currentUser.Role);
+        var shipment = await _shipmentService.GetRawByIdAsync(id);
+        var authResult = await _authorizationService.AuthorizeAsync(User, shipment, "ShipmentAccessPolicy");
+        if (!authResult.Succeeded)
+        {
+            throw new ForbiddenException("You do not have access to this shipment.");
+        }
+
+        var result = await _shipmentService.GetByIdAsync(shipment);
         return Ok(result);
     }
 
@@ -38,7 +52,14 @@ public class ShipmentsController : ControllerBase
     [Authorize(Roles = "CUSTOMER")]
     public async Task<IActionResult> Update(Guid id, UpdateShipmentRequest request)
     {
-        await _shipmentService.UpdateAsync(id, request, _currentUser.Id);
+        var shipment = await _shipmentService.GetRawByIdAsync(id);
+        var authResult = await _authorizationService.AuthorizeAsync(User, shipment, "ShipmentAccessPolicy");
+        if (!authResult.Succeeded)
+        {
+            throw new ForbiddenException("You do not have access to this shipment.");
+        }
+
+        await _shipmentService.UpdateAsync(shipment, request);
         return Ok();
     }
 
@@ -46,14 +67,22 @@ public class ShipmentsController : ControllerBase
     [Authorize(Roles = "CUSTOMER")]
     public async Task<IActionResult> Cancel(Guid id)
     {
-        var result = await _shipmentService.CancelAsync(id, _currentUser.Id);
+        var shipment = await _shipmentService.GetRawByIdAsync(id);
+        var authResult = await _authorizationService.AuthorizeAsync(User, shipment, "ShipmentAccessPolicy");
+        if (!authResult.Succeeded)
+        {
+            throw new ForbiddenException("You do not have access to this shipment.");
+        }
+
+        var result = await _shipmentService.CancelAsync(shipment, _currentUser.Id);
         return Ok(result);
     }
 
     [HttpGet]
+    [Authorize(Roles = "CUSTOMER,ADMIN")]
     public async Task<IActionResult> GetShipments(
         [FromQuery] string? search,
-        [FromQuery] string? status,
+        [FromQuery] ShipmentStatus? status,
         [FromQuery] DateTime? dateFrom,
         [FromQuery] DateTime? dateTo,
         [FromQuery] int page = 1,
@@ -84,7 +113,14 @@ public class ShipmentsController : ControllerBase
     [Authorize(Roles = "DRIVER")]
     public async Task<IActionResult> CancelClaim(Guid id, CancelClaimRequest request)
     {
-        var result = await _shipmentService.CancelClaimAsync(id, _currentUser.Id, request);
+        var shipment = await _shipmentService.GetRawByIdAsync(id);
+        var authResult = await _authorizationService.AuthorizeAsync(User, shipment, "ShipmentAccessPolicy");
+        if (!authResult.Succeeded)
+        {
+            throw new ForbiddenException("You do not have access to this shipment.");
+        }
+
+        var result = await _shipmentService.CancelClaimAsync(shipment, _currentUser.Id, request);
         return Ok(result);
     }
 
@@ -92,7 +128,14 @@ public class ShipmentsController : ControllerBase
     [Authorize(Roles = "DRIVER")]
     public async Task<IActionResult> ConfirmPickup(Guid id, ConfirmPickupRequest request)
     {
-        var result = await _shipmentService.ConfirmPickupAsync(id, _currentUser.Id, request);
+        var shipment = await _shipmentService.GetRawByIdAsync(id);
+        var authResult = await _authorizationService.AuthorizeAsync(User, shipment, "ShipmentAccessPolicy");
+        if (!authResult.Succeeded)
+        {
+            throw new ForbiddenException("You do not have access to this shipment.");
+        }
+
+        var result = await _shipmentService.ConfirmPickupAsync(shipment, _currentUser.Id, request);
         return Ok(result);
     }
 
@@ -100,7 +143,14 @@ public class ShipmentsController : ControllerBase
     [Authorize(Roles = "DRIVER")]
     public async Task<IActionResult> ConfirmDelivery(Guid id, ConfirmDeliveryRequest request)
     {
-        var result = await _shipmentService.ConfirmDeliveryAsync(id, _currentUser.Id, request);
+        var shipment = await _shipmentService.GetRawByIdAsync(id);
+        var authResult = await _authorizationService.AuthorizeAsync(User, shipment, "ShipmentAccessPolicy");
+        if (!authResult.Succeeded)
+        {
+            throw new ForbiddenException("You do not have access to this shipment.");
+        }
+
+        var result = await _shipmentService.ConfirmDeliveryAsync(shipment, _currentUser.Id, request);
         return Ok(result);
     }
 
@@ -108,7 +158,14 @@ public class ShipmentsController : ControllerBase
     [Authorize(Roles = "DRIVER")]
     public async Task<IActionResult> ConfirmCashCollected(Guid id)
     {
-        var result = await _shipmentService.ConfirmCashCollectedAsync(id, _currentUser.Id);
+        var shipment = await _shipmentService.GetRawByIdAsync(id);
+        var authResult = await _authorizationService.AuthorizeAsync(User, shipment, "ShipmentAccessPolicy");
+        if (!authResult.Succeeded)
+        {
+            throw new ForbiddenException("You do not have access to this shipment.");
+        }
+
+        var result = await _shipmentService.ConfirmCashCollectedAsync(shipment, _currentUser.Id);
         return Ok(result);
     }
 
@@ -116,7 +173,14 @@ public class ShipmentsController : ControllerBase
     [Authorize(Roles = "DRIVER")]
     public async Task<IActionResult> MarkPickupFailed(Guid id, PickupFailedRequest request)
     {
-        var result = await _shipmentService.MarkPickupFailedAsync(id, _currentUser.Id, request);
+        var shipment = await _shipmentService.GetRawByIdAsync(id);
+        var authResult = await _authorizationService.AuthorizeAsync(User, shipment, "ShipmentAccessPolicy");
+        if (!authResult.Succeeded)
+        {
+            throw new ForbiddenException("You do not have access to this shipment.");
+        }
+
+        var result = await _shipmentService.MarkPickupFailedAsync(shipment, _currentUser.Id, request);
         return Ok(result);
     }
 }

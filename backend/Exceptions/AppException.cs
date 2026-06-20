@@ -48,6 +48,7 @@ public class ForbiddenException : AppException
     public ForbiddenException(string message) : base(message) { }
 }
 
+
 public class TooManyRequestsException : AppException
 {
     public override int StatusCode => StatusCodes.Status429TooManyRequests;

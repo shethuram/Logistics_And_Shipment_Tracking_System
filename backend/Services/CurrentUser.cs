@@ -38,7 +38,6 @@ public class CurrentUser : ICurrentUser
                     if (user != null)
                     {
                         context.Items["DbUserId"] = user.Id;
-                        context.Items["DbUserRole"] = user.Role.ToString();
                         return user.Id;
                     }
                 }
@@ -53,27 +52,34 @@ public class CurrentUser : ICurrentUser
         get
         {
             var context = _httpContextAccessor.HttpContext;
-            if (context?.User?.Identity?.IsAuthenticated == true)
-            {
-                if (context.Items.TryGetValue("DbUserRole", out var cachedRole) && cachedRole is string roleStr)
-                {
-                    return roleStr;
-                }
+            return context?.User
+                .FindFirst("https://logistics.api/claims/roles")?.Value
+                ?? string.Empty;
+        }
+    }
 
-                var nameId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (!string.IsNullOrEmpty(nameId))
-                {
-                    var user = _db.Users.AsNoTracking().FirstOrDefault(u => u.Auth0Id == nameId);
-                    if (user != null)
-                    {
-                        context.Items["DbUserId"] = user.Id;
-                        context.Items["DbUserRole"] = user.Role.ToString();
-                        return user.Role.ToString().ToUpper();
-                    }
-                }
+    public Guid? DriverId
+    {
+        get
+        {
+            var userId = Id; 
+            if (userId == Guid.Empty) return null;
+
+            var context = _httpContextAccessor.HttpContext;
+            if (context?.Items.TryGetValue("DbDriverId", out var cachedId) == true && cachedId is Guid guidId)
+            {
+                return guidId;
             }
 
-            return "CUSTOMER";
+            var driver = _db.Drivers.AsNoTracking().FirstOrDefault(d => d.UserId == userId);
+            if (driver != null)
+            {
+                if (context != null)
+                    context.Items["DbDriverId"] = driver.Id;
+                return driver.Id;
+            }
+
+            return null;
         }
     }
 }

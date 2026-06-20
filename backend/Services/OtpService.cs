@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using Logistics.Api.Interfaces.Services;
 using Microsoft.Extensions.Configuration;
 
@@ -39,14 +37,5 @@ public class OtpService : IOtpService
         {
             return false;
         }
-    }
-
-    public string GenerateDeterministicOtp(Guid shipmentId, string salt)
-    {
-        var combinedKey = Encoding.UTF8.GetBytes(_secret + salt);
-        using var hmac = new HMACSHA256(combinedKey);
-        var hash = hmac.ComputeHash(shipmentId.ToByteArray());
-        var num = BitConverter.ToUInt32(hash, 0) % 10000;
-        return num.ToString("D4");
     }
 }

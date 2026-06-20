@@ -43,36 +43,7 @@ public class TrackingServiceTests
         _driverRepoMock.Setup(r => r.GetByUserIdAsync(driverUserId)).ReturnsAsync((Driver)null!);
         var request = new TrackingLocationRequest { ShipmentId = Guid.NewGuid(), Latitude = 12.34m, Longitude = 56.78m };
 
-        await Assert.ThrowsAsync<NotFoundException>(() => _service.RecordLocationAsync(request, driverUserId));
-    }
-
-    [Fact]
-    public async Task RecordLocationAsync_ShipmentNotFound_ThrowsNotFoundException()
-    {
-        var driverUserId = Guid.NewGuid();
-        var driver = new Driver { Id = Guid.NewGuid(), UserId = driverUserId };
-        _driverRepoMock.Setup(r => r.GetByUserIdAsync(driverUserId)).ReturnsAsync(driver);
-        
-        var shipmentId = Guid.NewGuid();
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync((Shipment)null!);
-        var request = new TrackingLocationRequest { ShipmentId = shipmentId, Latitude = 12.34m, Longitude = 56.78m };
-
-        await Assert.ThrowsAsync<NotFoundException>(() => _service.RecordLocationAsync(request, driverUserId));
-    }
-
-    [Fact]
-    public async Task RecordLocationAsync_NotAssignedDriver_ThrowsForbiddenException()
-    {
-        var driverUserId = Guid.NewGuid();
-        var driver = new Driver { Id = Guid.NewGuid(), UserId = driverUserId };
-        _driverRepoMock.Setup(r => r.GetByUserIdAsync(driverUserId)).ReturnsAsync(driver);
-
-        var shipmentId = Guid.NewGuid();
-        var shipment = new Shipment { Id = shipmentId, DriverId = Guid.NewGuid() };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
-        var request = new TrackingLocationRequest { ShipmentId = shipmentId, Latitude = 12.34m, Longitude = 56.78m };
-
-        await Assert.ThrowsAsync<ForbiddenException>(() => _service.RecordLocationAsync(request, driverUserId));
+        await Assert.ThrowsAsync<NotFoundException>(() => _service.RecordLocationAsync(request, new Shipment(), driverUserId));
     }
 
     [Fact]
@@ -84,10 +55,9 @@ public class TrackingServiceTests
 
         var shipmentId = Guid.NewGuid();
         var shipment = new Shipment { Id = shipmentId, DriverId = driver.Id, Status = ShipmentStatus.ASSIGNED };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
         var request = new TrackingLocationRequest { ShipmentId = shipmentId, Latitude = 12.34m, Longitude = 56.78m };
 
-        await Assert.ThrowsAsync<BusinessRuleException>(() => _service.RecordLocationAsync(request, driverUserId));
+        await Assert.ThrowsAsync<BusinessRuleException>(() => _service.RecordLocationAsync(request, shipment, driverUserId));
     }
 
     [Fact]
@@ -99,11 +69,10 @@ public class TrackingServiceTests
 
         var shipmentId = Guid.NewGuid();
         var shipment = new Shipment { Id = shipmentId, DriverId = driver.Id, Status = ShipmentStatus.IN_TRANSIT };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
         
         var request = new TrackingLocationRequest { ShipmentId = shipmentId, Latitude = 12.3456m, Longitude = 56.7890m };
 
-        await _service.RecordLocationAsync(request, driverUserId);
+        await _service.RecordLocationAsync(request, shipment, driverUserId);
 
         Assert.Equal(12.3456m, driver.CurrentLat);
         Assert.Equal(56.7890m, driver.CurrentLng);
@@ -121,38 +90,16 @@ public class TrackingServiceTests
     }
 
     [Fact]
-    public async Task GetLiveLocationAsync_ShipmentNotFound_ThrowsNotFoundException()
-    {
-        var shipmentId = Guid.NewGuid();
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync((Shipment)null!);
-
-        await Assert.ThrowsAsync<NotFoundException>(() => 
-            _service.GetLiveLocationAsync(shipmentId, Guid.NewGuid(), "CUSTOMER"));
-    }
-
-    [Fact]
-    public async Task GetLiveLocationAsync_NotAuthorizedCustomer_ThrowsForbiddenException()
-    {
-        var shipmentId = Guid.NewGuid();
-        var shipment = new Shipment { Id = shipmentId, CustomerId = Guid.NewGuid() };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
-
-        await Assert.ThrowsAsync<ForbiddenException>(() => 
-            _service.GetLiveLocationAsync(shipmentId, Guid.NewGuid(), "CUSTOMER"));
-    }
-
-    [Fact]
-    public async Task GetLiveLocationAsync_AuthorizedCustomer_ReturnsLatestLocation()
+    public async Task GetLiveLocationAsync_ReturnsLatestLocation()
     {
         var shipmentId = Guid.NewGuid();
         var customerId = Guid.NewGuid();
         var shipment = new Shipment { Id = shipmentId, CustomerId = customerId };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
 
         var tracking = new Tracking { ShipmentId = shipmentId, Latitude = 1.0m, Longitude = 2.0m, RecordedAt = DateTime.UtcNow };
         _trackingRepoMock.Setup(r => r.GetLatestPingAsync(shipmentId)).ReturnsAsync(tracking);
 
-        var result = await _service.GetLiveLocationAsync(shipmentId, customerId, "CUSTOMER");
+        var result = await _service.GetLiveLocationAsync(shipment);
 
         Assert.NotNull(result);
         Assert.Equal(shipmentId, result.ShipmentId);
@@ -162,36 +109,13 @@ public class TrackingServiceTests
     }
 
     [Fact]
-    public async Task GetLiveLocationAsync_Admin_ReturnsLatestLocation()
-    {
-        var shipmentId = Guid.NewGuid();
-        var shipment = new Shipment { Id = shipmentId, CustomerId = Guid.NewGuid() };
-        _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync(shipment);
-
-        var tracking = new Tracking { ShipmentId = shipmentId, Latitude = 1.0m, Longitude = 2.0m, RecordedAt = DateTime.UtcNow };
-        _trackingRepoMock.Setup(r => r.GetLatestPingAsync(shipmentId)).ReturnsAsync(tracking);
-
-        var result = await _service.GetLiveLocationAsync(shipmentId, Guid.NewGuid(), "ADMIN");
-
-        Assert.NotNull(result);
-        Assert.NotNull(result.DriverLocation);
-    }
-
-    [Fact]
-    public async Task GetHistoryAsync_NotAdmin_ThrowsForbiddenException()
-    {
-        await Assert.ThrowsAsync<ForbiddenException>(() => 
-            _service.GetHistoryAsync(Guid.NewGuid(), "CUSTOMER"));
-    }
-
-    [Fact]
     public async Task GetHistoryAsync_ShipmentNotFound_ThrowsNotFoundException()
     {
         var shipmentId = Guid.NewGuid();
         _shipmentRepoMock.Setup(r => r.GetByIdAsync(shipmentId)).ReturnsAsync((Shipment)null!);
 
         await Assert.ThrowsAsync<NotFoundException>(() => 
-            _service.GetHistoryAsync(shipmentId, "ADMIN"));
+            _service.GetHistoryAsync(shipmentId));
     }
 
     [Fact]
@@ -207,7 +131,7 @@ public class TrackingServiceTests
         };
         _trackingRepoMock.Setup(r => r.GetHistoryAsync(shipmentId)).ReturnsAsync(history);
 
-        var result = await _service.GetHistoryAsync(shipmentId, "ADMIN");
+        var result = await _service.GetHistoryAsync(shipmentId);
 
         Assert.Single(result);
         Assert.Equal(1.0m, result[0].Latitude);

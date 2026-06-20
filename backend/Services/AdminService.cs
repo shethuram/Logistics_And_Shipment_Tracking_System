@@ -71,7 +71,7 @@ public class AdminService : IAdminService
         return new ReassignShipmentResponse
         {
             Id = shipment.Id,
-            Status = "OPEN",
+            Status = ShipmentStatus.OPEN,
             DriverId = null
         };
     }
@@ -126,7 +126,7 @@ public class AdminService : IAdminService
         };
     }
 
-    public async Task<byte[]> ExportShipmentsCsvAsync(string? status, DateTime? dateFrom, DateTime? dateTo)
+    public async Task<byte[]> ExportShipmentsCsvAsync(ShipmentStatus? status, DateTime? dateFrom, DateTime? dateTo)
     {
         var query = _db.Shipments
             .Include(s => s.Customer)
@@ -134,12 +134,9 @@ public class AdminService : IAdminService
                 .ThenInclude(d => d!.User)
             .AsNoTracking();
 
-        if (!string.IsNullOrEmpty(status))
+        if (status.HasValue)
         {
-            if (Enum.TryParse<ShipmentStatus>(status, out var s))
-            {
-                query = query.Where(x => x.Status == s);
-            }
+            query = query.Where(x => x.Status == status.Value);
         }
 
         if (dateFrom.HasValue)

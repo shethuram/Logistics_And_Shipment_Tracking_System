@@ -8,7 +8,7 @@ public static class VehicleMappings
     public static VehicleDto ToVehicleDto(this Vehicle vehicle) => new()
     {
         Id = vehicle.Id,
-        VehicleType = vehicle.VehicleType.ToString(),
+        VehicleType = vehicle.VehicleType,
         VehicleNumber = vehicle.VehicleNumber,
         IsActive = vehicle.IsActive,
         CreatedAt = vehicle.CreatedAt
@@ -17,7 +17,7 @@ public static class VehicleMappings
     public static AddVehicleResponse ToAddVehicleResponse(this Vehicle vehicle) => new()
     {
         Id = vehicle.Id,
-        VehicleType = vehicle.VehicleType.ToString(),
+        VehicleType = vehicle.VehicleType,
         VehicleNumber = vehicle.VehicleNumber,
         IsActive = vehicle.IsActive
     };
@@ -25,12 +25,12 @@ public static class VehicleMappings
     public static SetActiveVehicleResponse ToSetActiveVehicleResponse(this Vehicle vehicle) => new()
     {
         ActiveVehicleId = vehicle.Id,
-        VehicleType = vehicle.VehicleType.ToString()
+        VehicleType = vehicle.VehicleType
     };
 
     public static PendingDriverVehicleDto ToPendingDriverVehicleDto(this Vehicle vehicle) => new()
     {
-        VehicleType = vehicle.VehicleType.ToString(),
+        VehicleType = vehicle.VehicleType,
         VehicleNumber = vehicle.VehicleNumber
     };
 }

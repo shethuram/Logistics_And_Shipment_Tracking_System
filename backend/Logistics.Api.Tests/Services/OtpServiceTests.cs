@@ -28,7 +28,6 @@ public class OtpServiceTests
     [Fact]
     public void GenerateOtp_ReturnsFourDigitNumericString()
     {
-
         var otp = _otpService.GenerateOtp();
 
         Assert.NotNull(otp);
@@ -39,7 +38,6 @@ public class OtpServiceTests
     [Fact]
     public void HashAndVerifyOtp_CorrectOtp_ReturnsTrue()
     {
-
         var otp = "1234";
 
         var hash = _otpService.HashOtp(otp);
@@ -51,7 +49,6 @@ public class OtpServiceTests
     [Fact]
     public void VerifyOtp_IncorrectOtp_ReturnsFalse()
     {
-
         var otp = "1234";
         var wrongOtp = "5678";
 
@@ -64,42 +61,11 @@ public class OtpServiceTests
     [Fact]
     public void VerifyOtp_NullOrEmpty_ReturnsFalse()
     {
-
         var hash = _otpService.HashOtp("1234");
 
         Assert.False(_otpService.VerifyOtp("", hash));
         Assert.False(_otpService.VerifyOtp(null!, hash));
         Assert.False(_otpService.VerifyOtp("1234", ""));
         Assert.False(_otpService.VerifyOtp("1234", null!));
-    }
-
-    [Fact]
-    public void GenerateDeterministicOtp_SameInputs_ReturnsSameOtp()
-    {
-
-        var shipmentId = Guid.NewGuid();
-        var salt = "receiver";
-
-        var otp1 = _otpService.GenerateDeterministicOtp(shipmentId, salt);
-        var otp2 = _otpService.GenerateDeterministicOtp(shipmentId, salt);
-
-        Assert.Equal(otp1, otp2);
-        Assert.Equal(4, otp1.Length);
-        Assert.True(int.TryParse(otp1, out _));
-    }
-
-    [Fact]
-    public void GenerateDeterministicOtp_DifferentInputs_ReturnsDifferentOtp()
-    {
-
-        var shipmentId1 = Guid.NewGuid();
-        var shipmentId2 = Guid.NewGuid();
-        var salt = "receiver";
-
-        var otp1 = _otpService.GenerateDeterministicOtp(shipmentId1, salt);
-        var otp2 = _otpService.GenerateDeterministicOtp(shipmentId2, salt);
-
-
-        Assert.True(shipmentId1 == shipmentId2 || otp1 != otp2);
     }
 }

@@ -8,7 +8,7 @@ public static class DisputeMappings
     public static RaiseDisputeResponse ToRaiseDisputeResponse(this Dispute d) => new()
     {
         Id = d.Id,
-        Status = d.Status.ToString(),
+        Status = d.Status,
         CreatedAt = d.CreatedAt
     };
 
@@ -20,16 +20,16 @@ public static class DisputeMappings
         RaisedBy = d.RaisedByUser?.FullName ?? string.Empty,
         ComplaintText = d.ComplaintText,
         LlmSummary = d.LlmSummary,
-        LlmType = d.LlmType?.ToString(),
+        LlmType = d.LlmType,
         LlmSuggestedResolution = d.LlmSuggestedResolution,
-        Status = d.Status.ToString(),
+        Status = d.Status,
         CreatedAt = d.CreatedAt
     };
 
     public static ResolveDisputeResponse ToResolveDisputeResponse(this Dispute d) => new()
     {
         Id = d.Id,
-        Status = d.Status.ToString(),
+        Status = d.Status,
         ResolvedAt = d.ResolvedAt ?? DateTime.UtcNow
     };
 }

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Logistics.Api.Models;
 
 namespace Logistics.Api.DTOs;
 
@@ -15,11 +16,11 @@ public record GoOnlineRequest
 
 public record GoOnlineResponse
 {
-    public string OperationalStatus { get; init; } = string.Empty;
-    public string ActiveVehicleType { get; init; } = string.Empty;
+    public OperationalStatus OperationalStatus { get; init; }
+    public VehicleType ActiveVehicleType { get; init; }
 }
 
 public record GoOfflineResponse
 {
-    public string OperationalStatus { get; init; } = string.Empty;
+    public OperationalStatus OperationalStatus { get; init; }
 }

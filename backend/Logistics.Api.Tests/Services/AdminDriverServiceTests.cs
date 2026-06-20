@@ -59,7 +59,7 @@ public class AdminDriverServiceTests
         var result = await _service.ApproveDriverAsync(driverId);
 
         Assert.Equal(driverId, result.Id);
-        Assert.Equal("APPROVED", result.ApprovalStatus);
+        Assert.Equal(ApprovalStatus.APPROVED, result.ApprovalStatus);
         Assert.Equal(ApprovalStatus.APPROVED, driver.ApprovalStatus);
         Assert.True(driver.ApprovedAt > DateTime.UtcNow.AddSeconds(-5));
         _driverRepoMock.Verify(r => r.UpdateAsync(driver), Times.Once);
@@ -76,7 +76,7 @@ public class AdminDriverServiceTests
         var result = await _service.RejectDriverAsync(driverId, request);
 
         Assert.Equal(driverId, result.Id);
-        Assert.Equal("REJECTED", result.ApprovalStatus);
+        Assert.Equal(ApprovalStatus.REJECTED, result.ApprovalStatus);
         Assert.Equal("Invalid ID", result.ApprovalReason);
         Assert.Equal(ApprovalStatus.REJECTED, driver.ApprovalStatus);
         _driverRepoMock.Verify(r => r.UpdateAsync(driver), Times.Once);
@@ -93,7 +93,7 @@ public class AdminDriverServiceTests
         var result = await _service.SuspendDriverAsync(driverId, request);
 
         Assert.Equal(driverId, result.Id);
-        Assert.Equal("SUSPENDED", result.ApprovalStatus);
+        Assert.Equal(ApprovalStatus.SUSPENDED, result.ApprovalStatus);
         Assert.Equal("Abuse", result.ApprovalReason);
         Assert.Equal(ApprovalStatus.SUSPENDED, driver.ApprovalStatus);
         _driverRepoMock.Verify(r => r.UpdateAsync(driver), Times.Once);

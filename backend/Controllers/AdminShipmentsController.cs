@@ -4,6 +4,7 @@ using Logistics.Api.DTOs;
 using Logistics.Api.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Logistics.Api.Models;
 
 namespace Logistics.Api.Controllers;
 
@@ -29,7 +30,7 @@ public class AdminShipmentsController : ControllerBase
     [HttpGet("shipments")]
     public async Task<IActionResult> GetAdminShipments(
         [FromQuery] string? search,
-        [FromQuery] string? status,
+        [FromQuery] ShipmentStatus? status,
         [FromQuery] DateTime? dateFrom,
         [FromQuery] DateTime? dateTo,
         [FromQuery] int page = 1,
@@ -57,7 +58,7 @@ public class AdminShipmentsController : ControllerBase
 
     [HttpGet("export/shipments")]
     public async Task<IActionResult> ExportShipments(
-        [FromQuery] string? status,
+        [FromQuery] ShipmentStatus? status,
         [FromQuery] DateTime? dateFrom,
         [FromQuery] DateTime? dateTo)
     {

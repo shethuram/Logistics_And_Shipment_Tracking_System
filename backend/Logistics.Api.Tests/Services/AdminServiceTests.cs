@@ -92,7 +92,7 @@ public class AdminServiceTests : IDisposable
         var result = await _service.ReassignShipmentAsync(shipmentId);
 
         Assert.NotNull(result);
-        Assert.Equal("OPEN", result.Status);
+        Assert.Equal(ShipmentStatus.OPEN, result.Status);
         Assert.Null(result.DriverId);
 
         Assert.Null(shipment.DriverId);
@@ -175,7 +175,7 @@ public class AdminServiceTests : IDisposable
         _db.Shipments.Add(shipment);
         _db.SaveChanges();
 
-        var csvBytes = await _service.ExportShipmentsCsvAsync("DELIVERED", null, null);
+        var csvBytes = await _service.ExportShipmentsCsvAsync(ShipmentStatus.DELIVERED, null, null);
         var csvString = Encoding.UTF8.GetString(csvBytes);
 
         Assert.Contains("OrderId,CustomerName,CustomerEmail", csvString);

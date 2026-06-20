@@ -72,7 +72,7 @@ public class AuthServiceTests : IDisposable
 
         Assert.NotNull(result);
         Assert.Equal("Name", result.FullName);
-        Assert.Equal("CUSTOMER", result.Role);
+        Assert.Equal(UserRole.CUSTOMER, result.Role);
 
         _userRepoMock.Verify(r => r.AddAsync(It.Is<User>(u => 
             u.Auth0Id == auth0Id && 
@@ -109,7 +109,7 @@ public class AuthServiceTests : IDisposable
 
         Assert.NotNull(result);
         Assert.Equal("Driver Name", result.FullName);
-        Assert.Equal("PENDING", result.ApprovalStatus);
+        Assert.Equal(ApprovalStatus.PENDING, result.ApprovalStatus);
 
         _userRepoMock.Verify(r => r.AddAsync(It.Is<User>(u => 
             u.Auth0Id == auth0Id && 

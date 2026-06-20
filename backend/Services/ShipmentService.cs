@@ -6,6 +6,7 @@ using Logistics.Api.Interfaces.Services;
 using Logistics.Api.Mappings;
 using Logistics.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Logistics.Api.Services;
 
@@ -19,6 +20,9 @@ public class ShipmentService : IShipmentService
     private readonly INotificationService _notificationService;
     private readonly AppDbContext _db;
     private readonly ILlmService _llmService;
+    private readonly ILogger<ShipmentService> _logger;
+    private readonly IEmailService _emailService;
+    private readonly IEmailTemplateService _emailTemplateService;
 
     public ShipmentService(
         IShipmentRepository shipmentRepo,
@@ -28,7 +32,10 @@ public class ShipmentService : IShipmentService
         IOtpService otpService,
         INotificationService notificationService,
         AppDbContext db,
-        ILlmService llmService)
+        ILlmService llmService,
+        ILogger<ShipmentService> _logger,
+        IEmailService emailService,
+        IEmailTemplateService emailTemplateService)
     {
         _shipmentRepo = shipmentRepo;
         _driverRepo = driverRepo;
@@ -38,25 +45,13 @@ public class ShipmentService : IShipmentService
         _notificationService = notificationService;
         _db = db;
         _llmService = llmService;
+        this._logger = _logger;
+        _emailService = emailService;
+        _emailTemplateService = emailTemplateService;
     }
 
     public async Task<CreateShipmentResponse> CreateAsync(CreateShipmentRequest request, Guid customerId)
     {
-        if (!Enum.TryParse<PackageType>(request.PackageType, out var packageType))
-            throw new ValidationException($"Invalid package type: {request.PackageType}");
-
-        if (!Enum.TryParse<PaymentMethod>(request.PaymentMethod, out var paymentMethod))
-            throw new ValidationException($"Invalid payment method: {request.PaymentMethod}");
-
-        PreferredWindow? preferredWindow = null;
-        if (!string.IsNullOrEmpty(request.PreferredWindow))
-        {
-            if (Enum.TryParse<PreferredWindow>(request.PreferredWindow, out var pw))
-                preferredWindow = pw;
-            else
-                throw new ValidationException($"Invalid preferred window: {request.PreferredWindow}");
-        }
-
         var shipment = new Shipment
         {
             Id = Guid.NewGuid(),
@@ -69,18 +64,18 @@ public class ShipmentService : IShipmentService
             DropLng = request.DropLng,
             ReceiverName = request.ReceiverName,
             ReceiverPhone = request.ReceiverPhone,
-            PackageType = packageType,
+            PackageType = request.PackageType,
             WeightKg = request.WeightKg,
-            PreferredWindow = preferredWindow,
+            PreferredWindow = request.PreferredWindow,
             SpecialNotes = request.SpecialNotes,
-            Status = paymentMethod == PaymentMethod.COD ? ShipmentStatus.OPEN : ShipmentStatus.PENDING_PAYMENT,
+            Status = request.PaymentMethod == PaymentMethod.COD ? ShipmentStatus.OPEN : ShipmentStatus.PENDING_PAYMENT,
             StatusChangedBy = customerId,
             StatusUpdatedAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
 
-        if (!string.IsNullOrEmpty(request.SpecialNotes))
+        if (!string.IsNullOrWhiteSpace(request.SpecialNotes))
         {
             var parsed = await _llmService.ParseDeliveryNoteAsync(request.SpecialNotes);
             shipment.RiskFlag = parsed.RiskFlag;
@@ -91,14 +86,14 @@ public class ShipmentService : IShipmentService
         }
 
         var senderOtp = _otpService.GenerateOtp();
-        var receiverOtp = _otpService.GenerateDeterministicOtp(shipment.Id, "receiver");
+        var receiverOtp = _otpService.GenerateOtp();
 
         shipment.SenderOtpHash = _otpService.HashOtp(senderOtp);
         shipment.SenderOtpExpiresAt = DateTime.UtcNow.AddMinutes(30);
         shipment.SenderOtpAttempts = 0;
 
         shipment.ReceiverOtpHash = _otpService.HashOtp(receiverOtp);
-        shipment.ReceiverOtpExpiresAt = DateTime.UtcNow.AddMinutes(30);
+        shipment.ReceiverOtpExpiresAt = DateTime.UtcNow.AddDays(1);
         shipment.ReceiverOtpAttempts = 0;
 
         const int maxRetries = 3;
@@ -121,68 +116,52 @@ public class ShipmentService : IShipmentService
             }
         }
 
+        var customer = await _db.Users.FindAsync(customerId);
+        var customerEmail = customer?.Email ?? "customer@example.com";
+        var customerName = customer?.FullName ?? "Customer";
+
+        var (emailSubject, emailBody) = _emailTemplateService.GenerateShipmentConfirmation(shipment, customerName, senderOtp, receiverOtp);
+        await _emailService.SendEmailAsync(customerEmail, emailSubject, emailBody);
+
         await _notificationService.CreateNotificationAsync(customerId, shipment.Id, "Shipment Created", $"Your shipment {shipment.OrderId} has been created successfully.");
 
-        if (paymentMethod == PaymentMethod.COD)
+        if (request.PaymentMethod == PaymentMethod.COD)
         {
             await BroadcastJobToEligibleDriversAsync(shipment);
         }
 
-        var paymentUrl = paymentMethod == PaymentMethod.ONLINE ? $"https://razorpay.com/pay/{shipment.Id}" : null;
+        var paymentUrl = request.PaymentMethod == PaymentMethod.ONLINE ? $"https://razorpay.com/pay/{shipment.Id}" : null;
 
         return shipment.ToCreateShipmentResponse(senderOtp, paymentUrl);
     }
 
-    public async Task<ShipmentResponse> GetByIdAsync(Guid id, Guid userId, string role)
+    public async Task<Shipment> GetRawByIdAsync(Guid id)
     {
         var shipment = await _shipmentRepo.GetByIdAsync(id);
         if (shipment == null)
             throw new NotFoundException("Shipment not found.");
-
-        if (role == "ADMIN")
-        {
-            return shipment.ToShipmentResponse();
-        }
-        if (role == "CUSTOMER" && shipment.CustomerId == userId)
-        {
-            return shipment.ToShipmentResponse();
-        }
-        if (role == "DRIVER")
-        {
-            var driver = await _driverRepo.GetByUserIdAsync(userId);
-            if (driver != null && shipment.DriverId == driver.Id)
-            {
-                return shipment.ToShipmentResponse();
-            }
-        }
-
-        throw new ForbiddenException("You are not authorized to view this shipment.");
+        return shipment;
     }
 
-    public async Task UpdateAsync(Guid id, UpdateShipmentRequest request, Guid customerId)
+    public async Task<ShipmentResponse> GetByIdAsync(Shipment shipment)
     {
-        var shipment = await _shipmentRepo.GetByIdAsync(id);
-        if (shipment == null)
-            throw new NotFoundException("Shipment not found.");
+        return shipment.ToShipmentResponse();
+    }
 
-        if (shipment.CustomerId != customerId)
-            throw new ForbiddenException("You are not authorized to update this shipment.");
-
+    public async Task UpdateAsync(Shipment shipment, UpdateShipmentRequest request)
+    {
         if (shipment.Status != ShipmentStatus.PENDING_PAYMENT && shipment.Status != ShipmentStatus.OPEN)
             throw new BusinessRuleException("Shipment can only be updated when status is PENDING_PAYMENT or OPEN.");
 
-        if (!string.IsNullOrEmpty(request.PreferredWindow))
+        if (request.PreferredWindow.HasValue)
         {
-            if (Enum.TryParse<PreferredWindow>(request.PreferredWindow, out var pw))
-                shipment.PreferredWindow = pw;
-            else
-                throw new ValidationException($"Invalid preferred window: {request.PreferredWindow}");
+            shipment.PreferredWindow = request.PreferredWindow.Value;
         }
 
         if (request.SpecialNotes != null)
         {
             shipment.SpecialNotes = request.SpecialNotes;
-            if (!string.IsNullOrEmpty(request.SpecialNotes))
+            if (!string.IsNullOrWhiteSpace(request.SpecialNotes))
             {
                 var parsed = await _llmService.ParseDeliveryNoteAsync(request.SpecialNotes);
                 shipment.RiskFlag = parsed.RiskFlag;
@@ -205,15 +184,8 @@ public class ShipmentService : IShipmentService
         await _shipmentRepo.UpdateAsync(shipment);
     }
 
-    public async Task<CancelShipmentResponse> CancelAsync(Guid id, Guid customerId)
+    public async Task<CancelShipmentResponse> CancelAsync(Shipment shipment, Guid customerId)
     {
-        var shipment = await _shipmentRepo.GetByIdAsync(id);
-        if (shipment == null)
-            throw new NotFoundException("Shipment not found.");
-
-        if (shipment.CustomerId != customerId)
-            throw new ForbiddenException("You are not authorized to cancel this shipment.");
-
         if (shipment.Status == ShipmentStatus.ASSIGNED ||
             shipment.Status == ShipmentStatus.IN_TRANSIT ||
             shipment.Status == ShipmentStatus.DELIVERED)
@@ -232,32 +204,21 @@ public class ShipmentService : IShipmentService
         return new CancelShipmentResponse
         {
             Id = shipment.Id,
-            Status = shipment.Status.ToString(),
+            Status = shipment.Status,
             RefundInitiated = refundInitiated
         };
     }
 
     public async Task<PagedResult<ShipmentResponse>> GetShipmentsAsync(
-        Guid userId, string role, string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page, int pageSize)
+        Guid userId, string role, string? search, ShipmentStatus? status, DateTime? dateFrom, DateTime? dateTo, int page, int pageSize)
     {
         Guid? customerIdFilter = null;
         if (role == "CUSTOMER")
         {
             customerIdFilter = userId;
         }
-        else if (role != "ADMIN")
-        {
-            throw new ForbiddenException("You are not authorized to list shipments.");
-        }
 
-        ShipmentStatus? statusFilter = null;
-        if (!string.IsNullOrEmpty(status))
-        {
-            if (Enum.TryParse<ShipmentStatus>(status, out var s))
-                statusFilter = s;
-            else
-                throw new ValidationException($"Invalid shipment status filter: {status}");
-        }
+        var statusFilter = status;
 
         var (items, total) = await _shipmentRepo.GetShipmentsAsync(
             customerIdFilter, search, statusFilter, dateFrom, dateTo, page, pageSize);
@@ -370,18 +331,11 @@ public class ShipmentService : IShipmentService
         }
     }
 
-    public async Task<CancelClaimResponse> CancelClaimAsync(Guid id, Guid driverUserId, CancelClaimRequest request)
+    public async Task<CancelClaimResponse> CancelClaimAsync(Shipment shipment, Guid driverUserId, CancelClaimRequest request)
     {
         var driver = await _driverRepo.GetByUserIdAsync(driverUserId);
         if (driver == null)
             throw new NotFoundException("Driver profile not found.");
-
-        var shipment = await _shipmentRepo.GetByIdAsync(id);
-        if (shipment == null)
-            throw new NotFoundException("Shipment not found.");
-
-        if (shipment.DriverId != driver.Id)
-            throw new ForbiddenException("You are not assigned to this shipment.");
 
         if (shipment.Status != ShipmentStatus.ASSIGNED)
             throw new BusinessRuleException("You can only cancel claim when shipment is in ASSIGNED status.");
@@ -420,18 +374,11 @@ public class ShipmentService : IShipmentService
         return shipment.ToCancelClaimResponse(driver.CancelCount);
     }
 
-    public async Task<ConfirmPickupResponse> ConfirmPickupAsync(Guid id, Guid driverUserId, ConfirmPickupRequest request)
+    public async Task<ConfirmPickupResponse> ConfirmPickupAsync(Shipment shipment, Guid driverUserId, ConfirmPickupRequest request)
     {
         var driver = await _driverRepo.GetByUserIdAsync(driverUserId);
         if (driver == null)
             throw new NotFoundException("Driver profile not found.");
-
-        var shipment = await _shipmentRepo.GetByIdAsync(id);
-        if (shipment == null)
-            throw new NotFoundException("Shipment not found.");
-
-        if (shipment.DriverId != driver.Id)
-            throw new ForbiddenException("You are not assigned to this shipment.");
 
         if (shipment.Status != ShipmentStatus.ASSIGNED)
             throw new BusinessRuleException("Shipment must be in ASSIGNED status to confirm pickup.");
@@ -474,18 +421,11 @@ public class ShipmentService : IShipmentService
         return shipment.ToConfirmPickupResponse();
     }
 
-    public async Task<ConfirmDeliveryResponse> ConfirmDeliveryAsync(Guid id, Guid driverUserId, ConfirmDeliveryRequest request)
+    public async Task<ConfirmDeliveryResponse> ConfirmDeliveryAsync(Shipment shipment, Guid driverUserId, ConfirmDeliveryRequest request)
     {
         var driver = await _driverRepo.GetByUserIdAsync(driverUserId);
         if (driver == null)
             throw new NotFoundException("Driver profile not found.");
-
-        var shipment = await _shipmentRepo.GetByIdAsync(id);
-        if (shipment == null)
-            throw new NotFoundException("Shipment not found.");
-
-        if (shipment.DriverId != driver.Id)
-            throw new ForbiddenException("You are not assigned to this shipment.");
 
         if (shipment.Status != ShipmentStatus.IN_TRANSIT)
             throw new BusinessRuleException("Shipment must be in IN_TRANSIT status to confirm delivery.");
@@ -534,18 +474,11 @@ public class ShipmentService : IShipmentService
         return shipment.ToConfirmDeliveryResponse();
     }
 
-    public async Task<CashCollectedResponse> ConfirmCashCollectedAsync(Guid id, Guid driverUserId)
+    public async Task<CashCollectedResponse> ConfirmCashCollectedAsync(Shipment shipment, Guid driverUserId)
     {
         var driver = await _driverRepo.GetByUserIdAsync(driverUserId);
         if (driver == null)
             throw new NotFoundException("Driver profile not found.");
-
-        var shipment = await _shipmentRepo.GetByIdAsync(id);
-        if (shipment == null)
-            throw new NotFoundException("Shipment not found.");
-
-        if (shipment.DriverId != driver.Id)
-            throw new ForbiddenException("You are not assigned to this shipment.");
 
         if (shipment.Status != ShipmentStatus.DELIVERED)
             throw new BusinessRuleException("Cash can only be marked as collected after delivery is confirmed.");
@@ -558,18 +491,11 @@ public class ShipmentService : IShipmentService
         return shipment.ToCashCollectedResponse();
     }
 
-    public async Task<PickupFailedResponse> MarkPickupFailedAsync(Guid id, Guid driverUserId, PickupFailedRequest request)
+    public async Task<PickupFailedResponse> MarkPickupFailedAsync(Shipment shipment, Guid driverUserId, PickupFailedRequest request)
     {
         var driver = await _driverRepo.GetByUserIdAsync(driverUserId);
         if (driver == null)
             throw new NotFoundException("Driver profile not found.");
-
-        var shipment = await _shipmentRepo.GetByIdAsync(id);
-        if (shipment == null)
-            throw new NotFoundException("Shipment not found.");
-
-        if (shipment.DriverId != driver.Id)
-            throw new ForbiddenException("You are not assigned to this shipment.");
 
         if (shipment.Status != ShipmentStatus.ASSIGNED)
             throw new BusinessRuleException("Shipment must be in ASSIGNED status to mark pickup as failed.");
@@ -610,15 +536,13 @@ public class ShipmentService : IShipmentService
             throw new NotFoundException("Shipment not found.");
         }
 
-        var receiverOtp = _otpService.GenerateDeterministicOtp(shipment.Id, "receiver");
-
         PublicTrackingDriverDto? driverDto = null;
         if (shipment.Driver != null)
         {
             driverDto = new PublicTrackingDriverDto
             {
                 FullName = shipment.Driver.User?.FullName ?? string.Empty,
-                VehicleType = shipment.Driver.ActiveVehicle?.VehicleType.ToString() ?? string.Empty,
+                VehicleType = shipment.Driver.ActiveVehicle?.VehicleType,
                 VehicleNumber = shipment.Driver.ActiveVehicle?.VehicleNumber ?? string.Empty
             };
         }
@@ -775,7 +699,7 @@ public class ShipmentService : IShipmentService
             });
         }
 
-        return shipment.ToPublicTrackingResponse(receiverOtp, driverDto, driverLocation, timeline);
+        return shipment.ToPublicTrackingResponse(driverDto, driverLocation, timeline);
     }
 
     private async Task BroadcastJobToEligibleDriversAsync(Shipment shipment)

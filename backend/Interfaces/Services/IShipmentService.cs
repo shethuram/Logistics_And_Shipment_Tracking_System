@@ -1,23 +1,24 @@
 using Logistics.Api.DTOs;
+using Logistics.Api.Models;
 
 namespace Logistics.Api.Interfaces.Services;
 
 public interface IShipmentService
 {
-    // Batch 1 Methods
     Task<CreateShipmentResponse> CreateAsync(CreateShipmentRequest request, Guid customerId);
-    Task<ShipmentResponse> GetByIdAsync(Guid id, Guid userId, string role);
-    Task UpdateAsync(Guid id, UpdateShipmentRequest request, Guid customerId);
-    Task<CancelShipmentResponse> CancelAsync(Guid id, Guid customerId);
-    Task<PagedResult<ShipmentResponse>> GetShipmentsAsync(Guid userId, string role, string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page, int pageSize);
+    Task<Shipment> GetRawByIdAsync(Guid id);
+    Task<ShipmentResponse> GetByIdAsync(Shipment shipment);
+    Task UpdateAsync(Shipment shipment, UpdateShipmentRequest request);
+    Task<CancelShipmentResponse> CancelAsync(Shipment shipment, Guid userId);
+    Task<PagedResult<ShipmentResponse>> GetShipmentsAsync(Guid userId, string role, string? search, ShipmentStatus? status, DateTime? dateFrom, DateTime? dateTo, int page, int pageSize);
     Task<IReadOnlyList<AvailableShipmentDto>> GetAvailableShipmentsAsync(Guid driverId);
 
-    // Batch 2 Methods
+   
     Task<ClaimShipmentResponse> ClaimAsync(Guid id, Guid driverId);
-    Task<CancelClaimResponse> CancelClaimAsync(Guid id, Guid driverId, CancelClaimRequest request);
-    Task<ConfirmPickupResponse> ConfirmPickupAsync(Guid id, Guid driverId, ConfirmPickupRequest request);
-    Task<ConfirmDeliveryResponse> ConfirmDeliveryAsync(Guid id, Guid driverId, ConfirmDeliveryRequest request);
-    Task<CashCollectedResponse> ConfirmCashCollectedAsync(Guid id, Guid driverId);
-    Task<PickupFailedResponse> MarkPickupFailedAsync(Guid id, Guid driverId, PickupFailedRequest request);
+    Task<CancelClaimResponse> CancelClaimAsync(Shipment shipment, Guid driverId, CancelClaimRequest request);
+    Task<ConfirmPickupResponse> ConfirmPickupAsync(Shipment shipment, Guid driverId, ConfirmPickupRequest request);
+    Task<ConfirmDeliveryResponse> ConfirmDeliveryAsync(Shipment shipment, Guid driverId, ConfirmDeliveryRequest request);
+    Task<CashCollectedResponse> ConfirmCashCollectedAsync(Shipment shipment, Guid driverId);
+    Task<PickupFailedResponse> MarkPickupFailedAsync(Shipment shipment, Guid driverId, PickupFailedRequest request);
     Task<PublicTrackingResponse> GetPublicTrackingAsync(string orderId, string phone, string date);
 }

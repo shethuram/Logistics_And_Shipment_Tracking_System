@@ -9,7 +9,7 @@ public static class ShipmentMappings
     {
         Id = s.Id,
         OrderId = s.OrderId,
-        Status = s.Status.ToString(),
+        Status = s.Status,
         PaymentUrl = paymentUrl,
         SenderOtp = senderOtp
     };
@@ -18,7 +18,7 @@ public static class ShipmentMappings
     {
         Id = s.Id,
         OrderId = s.OrderId,
-        Status = s.Status.ToString(),
+        Status = s.Status,
         PickupAddress = s.PickupAddress,
         PickupLat = s.PickupLat,
         PickupLng = s.PickupLng,
@@ -27,13 +27,13 @@ public static class ShipmentMappings
         DropLng = s.DropLng,
         ReceiverName = s.ReceiverName,
         ReceiverPhone = s.ReceiverPhone,
-        PackageType = s.PackageType.ToString(),
+        PackageType = s.PackageType,
         WeightKg = s.WeightKg,
-        PreferredWindow = s.PreferredWindow?.ToString(),
+        PreferredWindow = s.PreferredWindow,
         SpecialNotes = s.SpecialNotes,
         DriverInstruction = s.DriverInstruction,
         RiskFlag = s.RiskFlag,
-        RiskSeverity = s.RiskSeverity.ToString(),
+        RiskSeverity = s.RiskSeverity,
         RiskReason = s.RiskReason,
         PreferredDeliveryAfter = s.PreferredDeliveryAfter,
         CashCollected = s.CashCollected,
@@ -45,7 +45,7 @@ public static class ShipmentMappings
         {
             Id = s.Driver.Id,
             FullName = s.Driver.User?.FullName ?? string.Empty,
-            VehicleType = s.Driver.ActiveVehicle?.VehicleType.ToString() ?? string.Empty,
+            VehicleType = s.Driver.ActiveVehicle?.VehicleType,
             VehicleNumber = s.Driver.ActiveVehicle?.VehicleNumber ?? string.Empty
         } : null
     };
@@ -56,9 +56,9 @@ public static class ShipmentMappings
         OrderId = s.OrderId,
         PickupAddress = s.PickupAddress,
         DropAddress = s.DropAddress,
-        PackageType = s.PackageType.ToString(),
+        PackageType = s.PackageType,
         WeightKg = s.WeightKg,
-        PreferredWindow = s.PreferredWindow?.ToString(),
+        PreferredWindow = s.PreferredWindow,
         SenderPhone = s.Customer?.Phone ?? string.Empty,
         ReceiverPhone = s.ReceiverPhone,
         DistanceToPickupKm = distanceToPickupKm,
@@ -68,27 +68,27 @@ public static class ShipmentMappings
     public static ClaimShipmentResponse ToClaimShipmentResponse(this Shipment s) => new()
     {
         Id = s.Id,
-        Status = s.Status.ToString(),
+        Status = s.Status,
         OrderId = s.OrderId
     };
 
     public static CancelClaimResponse ToCancelClaimResponse(this Shipment s, int driverCancelCount) => new()
     {
         Id = s.Id,
-        Status = s.Status.ToString(),
+        Status = s.Status,
         DriverCancelCount = driverCancelCount
     };
 
     public static ConfirmPickupResponse ToConfirmPickupResponse(this Shipment s) => new()
     {
         Id = s.Id,
-        Status = s.Status.ToString()
+        Status = s.Status
     };
 
     public static ConfirmDeliveryResponse ToConfirmDeliveryResponse(this Shipment s) => new()
     {
         Id = s.Id,
-        Status = s.Status.ToString(),
+        Status = s.Status,
         DeliveredAt = s.StatusUpdatedAt ?? DateTime.UtcNow
     };
 
@@ -101,27 +101,25 @@ public static class ShipmentMappings
     public static PickupFailedResponse ToPickupFailedResponse(this Shipment s) => new()
     {
         Id = s.Id,
-        Status = s.Status.ToString()
+        Status = s.Status
     };
 
     public static PublicTrackingResponse ToPublicTrackingResponse(
         this Shipment s, 
-        string receiverOtp, 
         PublicTrackingDriverDto? driver, 
         DriverLocationDto? driverLocation, 
         List<TimelineEntryDto> timeline) => new()
     {
         Id = s.Id,
         OrderId = s.OrderId,
-        Status = s.Status.ToString(),
+        Status = s.Status,
         PickupAddress = s.PickupAddress,
         DropAddress = s.DropAddress,
-        PackageType = s.PackageType.ToString(),
+        PackageType = s.PackageType,
         WeightKg = s.WeightKg,
-        PreferredWindow = s.PreferredWindow?.ToString(),
+        PreferredWindow = s.PreferredWindow,
         SpecialNotes = s.SpecialNotes,
         CreatedAt = s.CreatedAt,
-        ReceiverOtp = receiverOtp,
         Driver = driver,
         DriverLocation = driverLocation,
         Timeline = timeline

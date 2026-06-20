@@ -11,10 +11,17 @@ using Logistics.Api.Repositories;
 using Logistics.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
+using Logistics.Api.Authorization;
+using Microsoft.AspNetCore.Authorization;
+
 var builder = WebApplication.CreateBuilder(args);
 
 #region Services
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options => 
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -41,6 +48,18 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("ShipmentAccessPolicy", policy =>
+        policy.Requirements.Add(new ShipmentAccessRequirement()));
+    options.AddPolicy("NotificationAccessPolicy", policy =>
+        policy.Requirements.Add(new NotificationAccessRequirement()));
+});
+
+builder.Services.AddScoped<IAuthorizationHandler, ShipmentAccessHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, NotificationAccessHandler>();
+
+builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
 builder.Services.Configure<IpRateLimitOptions>(options =>
 {
@@ -83,6 +102,8 @@ builder.Services.AddScoped<ITrackingService, TrackingService>();
 builder.Services.AddScoped<ILlmService, LlmService>();
 builder.Services.AddScoped<IDisputeService, DisputeService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IEmailTemplateService, EmailTemplateService>();
 #endregion
 
 var app = builder.Build();

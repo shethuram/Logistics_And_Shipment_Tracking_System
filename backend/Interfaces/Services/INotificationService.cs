@@ -1,4 +1,5 @@
 using Logistics.Api.DTOs;
+using Logistics.Api.Models;
 
 namespace Logistics.Api.Interfaces.Services;
 
@@ -10,5 +11,6 @@ public interface INotificationService
     Task BroadcastAdminAlertAsync(string alertType, object data);
     Task BroadcastDriverLocationAsync(Guid shipmentId, decimal latitude, decimal longitude);
     Task<MyNotificationsResponse> GetMyNotificationsAsync(Guid userId, int page, int pageSize);
-    Task<MarkReadResponse> MarkAsReadAsync(Guid id, Guid userId);
+    Task<Notification> GetRawByIdAsync(Guid id);
+    Task<MarkReadResponse> MarkAsReadAsync(Notification notification);
 }
