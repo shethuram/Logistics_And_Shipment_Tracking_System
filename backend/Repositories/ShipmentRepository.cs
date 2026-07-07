@@ -29,6 +29,7 @@ public class ShipmentRepository : IShipmentRepository
                 .ThenInclude(d => d!.User)
             .Include(s => s.Driver)
                 .ThenInclude(d => d!.ActiveVehicle)
+            .Include(s => s.Payment)
             .FirstOrDefaultAsync(s => s.Id == id);
     }
 
@@ -60,6 +61,7 @@ public class ShipmentRepository : IShipmentRepository
                 .ThenInclude(d => d!.User)
             .Include(s => s.Driver)
                 .ThenInclude(d => d!.ActiveVehicle)
+            .Include(s => s.Payment)
             .AsNoTracking();
 
         if (customerId.HasValue)
@@ -104,6 +106,7 @@ public class ShipmentRepository : IShipmentRepository
     public async Task<IReadOnlyList<Shipment>> GetOpenShipmentsAsync()
     {
         return await _db.Shipments
+            .Include(s => s.Payment)
             .Where(s => s.Status == ShipmentStatus.OPEN)
             .ToListAsync();
     }

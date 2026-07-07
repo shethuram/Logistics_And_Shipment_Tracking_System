@@ -1,0 +1,96 @@
+<div class="jobs-container">
+  <div class="main-jobs">
+    
+    <div class="header-row">
+      <h1 class="header-title">My Vehicles & Status</h1>
+      @if (getActiveVehicle()) {
+        <button 
+          class="status-badge" 
+          [class.online]="isOnline()" 
+          [class.offline]="!isOnline()"
+          [disabled]="isLoading()"
+          (click)="toggleOnlineStatus()">
+          <span class="status-indicator"></span>
+          {{ isOnline() ? 'Go Offline' : 'Go Online' }}
+        </button>
+      } @else {
+        <span class="status-badge offline">No Active Vehicle</span>
+      }
+    </div>
+
+    @if (errorMessage()) {
+      <div class="alert-box">
+        {{ errorMessage() }}
+      </div>
+    }
+
+    <div class="form-group">
+      <div class="header-row" style="border-bottom: none; padding-bottom: 0;">
+        <h2 class="header-title" style="font-size: 18px;">Registered Vehicles</h2>
+        <button class="btn-matte" (click)="showNewVehicleModal.set(true)">Add Vehicle</button>
+      </div>
+
+      @if (vehicles().length === 0) {
+        <div class="content-placeholder">
+          <p>No registered vehicles found. Add one above to get matching parcel delivery alerts.</p>
+        </div>
+      } @else {
+        <div class="vehicles-grid">
+          @for (v of vehicles(); track v.id) {
+            <div class="vehicle-card" [class.active]="v.isActive">
+              <span class="vehicle-type-badge">{{ v.vehicleType }}</span>
+              <span class="vehicle-number">{{ v.vehicleNumber }}</span>
+              
+              @if (v.isActive) {
+                <button class="btn-matte" disabled>Active Vehicle</button>
+              } @else {
+                <button class="btn-outline" [disabled]="isLoading()" (click)="activateVehicle(v.id)">
+                  Activate
+                  </button>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+  </div>
+</div>
+
+@if (showNewVehicleModal()) {
+  <div class="modal-backdrop">
+    <div class="modal-content">
+      <h2 class="modal-title">Register New Vehicle</h2>
+      
+      <form [formGroup]="vehicleForm" (ngSubmit)="registerVehicleSubmit()">
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label">Vehicle Category</label>
+          <select formControlName="vehicleType" class="form-select">
+            <option value="TWO_WHEELER">Two Wheeler (Bike)</option>
+            <option value="THREE_WHEELER">Three Wheeler (Auto)</option>
+            <option value="FOUR_WHEELER">Four Wheeler (Mini-Truck)</option>
+            <option value="HEAVY_VEHICLE">Heavy Vehicle (Lorry)</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label class="form-label">Vehicle Registration Number</label>
+          <input 
+            type="text" 
+            formControlName="vehicleNumber" 
+            placeholder="e.g. TN33AB9999"
+            class="form-input"
+          />
+          @if (vehicleForm.get('vehicleNumber')?.touched && vehicleForm.get('vehicleNumber')?.invalid) {
+            <span class="alert-box" style="padding: 4px 8px; margin-top: 4px; font-size: 11px;">Format: State+RTO+Series+Number (e.g. MH12AB1234)</span>
+          }
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-outline" (click)="showNewVehicleModal.set(false)">Cancel</button>
+          <button type="submit" class="btn-matte" [disabled]="vehicleForm.invalid || isLoading()">Register</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

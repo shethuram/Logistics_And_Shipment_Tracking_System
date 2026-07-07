@@ -101,6 +101,18 @@ public class ShipmentsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("active")]
+    [Authorize(Roles = "DRIVER")]
+    public async Task<IActionResult> GetActive()
+    {
+        var result = await _shipmentService.GetActiveShipmentAsync(_currentUser.Id);
+        if (result == null)
+        {
+            return NotFound(new { message = "No active shipment found." });
+        }
+        return Ok(result);
+    }
+
     [HttpPost("{id:guid}/claim")]
     [Authorize(Roles = "DRIVER")]
     public async Task<IActionResult> Claim(Guid id)

@@ -44,7 +44,7 @@ public record RegisterDriverRequest
     public string Phone { get; init; } = string.Empty;
 
     [Required]
-    [RegularExpression(@"^[A-Z]{2}-\d{2}-[A-Z]{1,2}-\d{4}$", ErrorMessage = "Invalid License Number. Format must be XX-XX-X-XXXX or XX-XX-XX-XXXX.")]
+    [RegularExpression(@"^[A-Z]{2}[0-9]{2}[ ][0-9]{11}$", ErrorMessage = "Invalid License Number format. Must match SSRR YYYYNNNNNNN format (e.g. KA03 20150012345).")]
     public string LicenseNumber { get; init; } = string.Empty;
 }
 

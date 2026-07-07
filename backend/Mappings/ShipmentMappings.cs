@@ -5,13 +5,12 @@ namespace Logistics.Api.Mappings;
 
 public static class ShipmentMappings
 {
-    public static CreateShipmentResponse ToCreateShipmentResponse(this Shipment s, string? senderOtp = null, string? paymentUrl = null) => new()
+    public static CreateShipmentResponse ToCreateShipmentResponse(this Shipment s, string? paymentUrl = null) => new()
     {
         Id = s.Id,
         OrderId = s.OrderId,
         Status = s.Status,
-        PaymentUrl = paymentUrl,
-        SenderOtp = senderOtp
+        PaymentUrl = paymentUrl
     };
 
     public static ShipmentResponse ToShipmentResponse(this Shipment s) => new()
@@ -47,7 +46,15 @@ public static class ShipmentMappings
             FullName = s.Driver.User?.FullName ?? string.Empty,
             VehicleType = s.Driver.ActiveVehicle?.VehicleType,
             VehicleNumber = s.Driver.ActiveVehicle?.VehicleNumber ?? string.Empty
-        } : null
+        } : null,
+        DeliveryCharge = s.Payment != null ? s.Payment.DeliveryCharge : 0m,
+        PlatformFee = s.Payment != null ? s.Payment.PlatformFee : 0m,
+        Cgst = s.Payment != null ? s.Payment.Cgst : 0m,
+        Sgst = s.Payment != null ? s.Payment.Sgst : 0m,
+        TotalAmount = s.Payment != null ? s.Payment.Amount : 0m,
+        DriverEarnings = s.Payment != null ? s.Payment.DriverEarnings : 0m,
+        PaymentMethod = s.Payment != null ? s.Payment.Method.ToString() : string.Empty,
+        PaymentStatus = s.Payment != null ? s.Payment.Status.ToString() : string.Empty
     };
 
     public static AvailableShipmentDto ToAvailableShipmentDto(this Shipment s, double distanceToPickupKm) => new()
@@ -62,7 +69,8 @@ public static class ShipmentMappings
         SenderPhone = s.Customer?.Phone ?? string.Empty,
         ReceiverPhone = s.ReceiverPhone,
         DistanceToPickupKm = distanceToPickupKm,
-        DriverInstruction = s.DriverInstruction
+        DriverInstruction = s.DriverInstruction,
+        DriverEarnings = s.Payment != null ? s.Payment.DriverEarnings : 0m
     };
 
     public static ClaimShipmentResponse ToClaimShipmentResponse(this Shipment s) => new()
@@ -122,6 +130,13 @@ public static class ShipmentMappings
         CreatedAt = s.CreatedAt,
         Driver = driver,
         DriverLocation = driverLocation,
-        Timeline = timeline
+        Timeline = timeline,
+        DeliveryCharge = s.Payment != null ? s.Payment.DeliveryCharge : 0m,
+        PlatformFee = s.Payment != null ? s.Payment.PlatformFee : 0m,
+        Cgst = s.Payment != null ? s.Payment.Cgst : 0m,
+        Sgst = s.Payment != null ? s.Payment.Sgst : 0m,
+        TotalAmount = s.Payment != null ? s.Payment.Amount : 0m,
+        PaymentMethod = s.Payment != null ? s.Payment.Method.ToString() : string.Empty,
+        PaymentStatus = s.Payment != null ? s.Payment.Status.ToString() : string.Empty
     };
 }

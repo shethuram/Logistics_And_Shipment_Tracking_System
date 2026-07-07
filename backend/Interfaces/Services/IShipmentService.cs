@@ -12,6 +12,7 @@ public interface IShipmentService
     Task<CancelShipmentResponse> CancelAsync(Shipment shipment, Guid userId);
     Task<PagedResult<ShipmentResponse>> GetShipmentsAsync(Guid userId, string role, string? search, ShipmentStatus? status, DateTime? dateFrom, DateTime? dateTo, int page, int pageSize);
     Task<IReadOnlyList<AvailableShipmentDto>> GetAvailableShipmentsAsync(Guid driverId);
+    Task<ShipmentResponse?> GetActiveShipmentAsync(Guid driverUserId);
 
    
     Task<ClaimShipmentResponse> ClaimAsync(Guid id, Guid driverId);
@@ -21,4 +22,5 @@ public interface IShipmentService
     Task<CashCollectedResponse> ConfirmCashCollectedAsync(Shipment shipment, Guid driverId);
     Task<PickupFailedResponse> MarkPickupFailedAsync(Shipment shipment, Guid driverId, PickupFailedRequest request);
     Task<PublicTrackingResponse> GetPublicTrackingAsync(string orderId, string phone, string date);
+    PriceEstimationResponse EstimatePrice(PriceEstimationRequest request);
 }

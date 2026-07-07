@@ -1,0 +1,29 @@
+import { Routes } from '@angular/router';
+import { LandingPageComponent } from './components/landing-page/landing-page';
+import { CallbackComponent } from './components/auth/callback/callback';
+import { CompleteProfileComponent } from './components/auth/complete-profile/complete-profile';
+import { CustomerShipmentsComponent } from './components/customer/shipments/shipments';
+import { DriverJobsComponent } from './components/driver/jobs/jobs';
+import { DriverActiveComponent } from './components/driver/active/active';
+import { DriverVehiclesComponent } from './components/driver/vehicles/vehicles';
+import { DriverStatusComponent } from './components/driver/status/status';
+import { AdminDashboardComponent } from './components/admin/dashboard/dashboard';
+import { BookShipmentComponent } from './components/customer/book-shipment/book-shipment';
+import { CustomerShipmentDetailsComponent } from './components/customer/shipment-details/shipment-details';
+import { CustomerDisputesComponent } from './components/customer/disputes/disputes';
+import { customerGuard, driverGuard, adminGuard, unregisteredGuard } from './guards/auth.guard';
+
+export const routes: Routes = [
+  { path: '', component: LandingPageComponent },
+  { path: 'callback', component: CallbackComponent },
+  { path: 'complete-profile', component: CompleteProfileComponent, canActivate: [unregisteredGuard] },
+  { path: 'customer/book', component: BookShipmentComponent, canActivate: [customerGuard] },
+  { path: 'customer/shipments', component: CustomerShipmentsComponent, canActivate: [customerGuard] },
+  { path: 'customer/shipments/:id', component: CustomerShipmentDetailsComponent, canActivate: [customerGuard] },
+  { path: 'customer/disputes', component: CustomerDisputesComponent, canActivate: [customerGuard] },
+  { path: 'driver/jobs', component: DriverJobsComponent, canActivate: [driverGuard] },
+  { path: 'driver/active', component: DriverActiveComponent, canActivate: [driverGuard] },
+  { path: 'driver/vehicles', component: DriverVehiclesComponent, canActivate: [driverGuard] },
+  { path: 'driver/status', component: DriverStatusComponent, canActivate: [driverGuard] },
+  { path: 'admin/dashboard', component: AdminDashboardComponent, canActivate: [adminGuard] }
+];

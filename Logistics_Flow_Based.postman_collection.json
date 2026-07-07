@@ -1,0 +1,232 @@
+{
+  "info": {
+    "name": "Logistics - End-to-End Flow",
+    "description": "A flow-based collection demonstrating the entire lifecycle of a shipment, from user registration to delivery and dispute resolution.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5221" },
+    { "key": "adminToken", "value": "YOUR_ADMIN_JWT_HERE" },
+    { "key": "customerToken", "value": "YOUR_CUSTOMER_JWT_HERE" },
+    { "key": "driverToken", "value": "YOUR_DRIVER_JWT_HERE" },
+    { "key": "driverId", "value": "6b29fc40-ca47-1067-b31d-00dd010662da" },
+    { "key": "vehicleId", "value": "3d81b4d0-6f29-4e5a-9388-75b8a91b4200" },
+    { "key": "shipmentId", "value": "9a385f5e-141a-4f51-b062-817ab46fafe8" },
+    { "key": "disputeId", "value": "4c4bd164-96d5-45a7-abcb-b80c102a9eb0" },
+    { "key": "auth0Domain", "value": "dev-bytoqvyodyra0w6k.us.auth0.com" },
+    { "key": "auth0ClientId", "value": "YOUR_CLIENT_ID" },
+    { "key": "auth0ClientSecret", "value": "YOUR_CLIENT_SECRET" },
+    { "key": "auth0Audience", "value": "https://api.logistics-tracking.com" },
+    { "key": "username", "value": "driver@example.com" },
+    { "key": "password", "value": "pass1234@" }
+  ],
+  "item": [
+    {
+      "name": "1. Onboarding & Approval",
+      "item": [
+        {
+          "name": "1.0 Get Auth0 Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "https://{{auth0Domain}}/oauth/token", "protocol": "https", "host": ["{{auth0Domain}}"], "path": ["oauth", "token"] },
+            "body": { "mode": "raw", "raw": "{\n    \"grant_type\": \"password\",\n    \"username\": \"{{username}}\",\n    \"password\": \"{{password}}\",\n    \"audience\": \"{{auth0Audience}}\",\n    \"client_id\": \"{{auth0ClientId}}\",\n    \"client_secret\": \"{{auth0ClientSecret}}\"\n}" }
+          }
+        },
+        {
+          "name": "1.1 Register Customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/auth/register/customer", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register", "customer"] },
+            "body": { "mode": "raw", "raw": "{\n  \"auth0Id\": \"auth0|customer123\",\n  \"fullName\": \"Jane Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"phone\": \"+15551234567\"\n}" }
+          }
+        },
+        {
+          "name": "1.2 Register Driver",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{driverToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/auth/register/driver", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register", "driver"] },
+            "body": { "mode": "raw", "raw": "{\n  \"auth0Id\": \"auth0|driver123\",\n  \"fullName\": \"John Smith\",\n  \"email\": \"john.smith@example.com\",\n  \"phone\": \"+15559876543\",\n  \"licenseNumber\": \"DL-123456789\"\n}" }
+          }
+        },
+        {
+          "name": "1.3 Admin Approves Driver",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/drivers/{{driverId}}/approve", "host": ["{{baseUrl}}"], "path": ["api", "admin", "drivers", "{{driverId}}", "approve"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Driver Preparation",
+      "item": [
+        {
+          "name": "2.1 Add Vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{driverToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/drivers/vehicles", "host": ["{{baseUrl}}"], "path": ["api", "drivers", "vehicles"] },
+            "body": { "mode": "raw", "raw": "{\n  \"make\": \"Honda\",\n  \"model\": \"Activa\",\n  \"year\": 2023,\n  \"registrationNumber\": \"TN-45-XX-1234\",\n  \"vehicleType\": \"TWO_WHEELER\"\n}" }
+          }
+        },
+        {
+          "name": "2.2 Set Active Vehicle",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{driverToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/drivers/vehicles/{{vehicleId}}/set-active", "host": ["{{baseUrl}}"], "path": ["api", "drivers", "vehicles", "{{vehicleId}}", "set-active"] }
+          }
+        },
+        {
+          "name": "2.3 Go Online",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{driverToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/drivers/go-online", "host": ["{{baseUrl}}"], "path": ["api", "drivers", "go-online"] },
+            "body": { "mode": "raw", "raw": "{\n  \"latitude\": 13.0827,\n  \"longitude\": 80.2707\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Shipment Delivery Lifecycle",
+      "item": [
+        {
+          "name": "3.1 Customer Creates Shipment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/shipments", "host": ["{{baseUrl}}"], "path": ["api", "shipments"] },
+            "body": { "mode": "raw", "raw": "{\n  \"pickupAddress\": \"No 10, Gandhi Road, Chennai\",\n  \"pickupLat\": 13.0827,\n  \"pickupLng\": 80.2707,\n  \"dropAddress\": \"No 5, Anna Salai, Chennai\",\n  \"dropLat\": 13.0604,\n  \"dropLng\": 80.2496,\n  \"weightKg\": 3.5,\n  \"packageType\": \"SMALL_PARCEL\",\n  \"specialNotes\": \"Fragile items inside. Handle with care.\",\n  \"paymentMethod\": \"COD\",\n  \"receiverName\": \"John Doe\",\n  \"receiverPhone\": \"+919876543210\"\n}" }
+          }
+        },
+        {
+          "name": "3.2 Driver Views Available Jobs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{driverToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/shipments/available", "host": ["{{baseUrl}}"], "path": ["api", "shipments", "available"] }
+          }
+        },
+        {
+          "name": "3.3 Driver Claims Shipment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{driverToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}/claim", "host": ["{{baseUrl}}"], "path": ["api", "shipments", "{{shipmentId}}", "claim"] }
+          }
+        },
+        {
+          "name": "3.4 Driver Confirms Pickup (Sender OTP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{driverToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}/confirm-pickup", "host": ["{{baseUrl}}"], "path": ["api", "shipments", "{{shipmentId}}", "confirm-pickup"] },
+            "body": { "mode": "raw", "raw": "{\n  \"otp\": \"1234\"\n}" }
+          }
+        },
+        {
+          "name": "3.5 Driver Transmits Live Location",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{driverToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/tracking/location", "host": ["{{baseUrl}}"], "path": ["api", "tracking", "location"] },
+            "body": { "mode": "raw", "raw": "{\n  \"shipmentId\": \"{{shipmentId}}\",\n  \"latitude\": 13.0725,\n  \"longitude\": 80.2612\n}" }
+          }
+        },
+        {
+          "name": "3.6 Customer Checks Live Tracking",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/tracking/{{shipmentId}}/live", "host": ["{{baseUrl}}"], "path": ["api", "tracking", "{{shipmentId}}", "live"] }
+          }
+        },
+        {
+          "name": "3.7 Driver Confirms Delivery (Receiver OTP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{driverToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}/confirm-delivery", "host": ["{{baseUrl}}"], "path": ["api", "shipments", "{{shipmentId}}", "confirm-delivery"] },
+            "body": { "mode": "raw", "raw": "{\n  \"otp\": \"5678\",\n  \"driverLat\": 13.0604,\n  \"driverLng\": 80.2496\n}" }
+          }
+        },
+        {
+          "name": "3.8 Driver Confirms Cash Collected",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{driverToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}/cash-collected", "host": ["{{baseUrl}}"], "path": ["api", "shipments", "{{shipmentId}}", "cash-collected"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Post-Delivery & Disputes",
+      "item": [
+        {
+          "name": "4.1 Customer Raises Dispute",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/disputes", "host": ["{{baseUrl}}"], "path": ["api", "disputes"] },
+            "body": { "mode": "raw", "raw": "{\n  \"shipmentId\": \"{{shipmentId}}\",\n  \"reason\": \"Item was delivered damaged.\"\n}" }
+          }
+        },
+        {
+          "name": "4.2 Admin Views Disputes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/disputes", "host": ["{{baseUrl}}"], "path": ["api", "admin", "disputes"] }
+          }
+        },
+        {
+          "name": "4.3 Admin Resolves Dispute",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/admin/disputes/{{disputeId}}/resolve", "host": ["{{baseUrl}}"], "path": ["api", "admin", "disputes", "{{disputeId}}", "resolve"] },
+            "body": { "mode": "raw", "raw": "{\n  \"resolution\": \"Refunded $20 to wallet.\",\n  \"refundAmount\": 20.00\n}" }
+          }
+        }
+      ]
+    }
+  ]
+}

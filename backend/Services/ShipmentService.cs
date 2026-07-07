@@ -52,6 +52,12 @@ public class ShipmentService : IShipmentService
 
     public async Task<CreateShipmentResponse> CreateAsync(CreateShipmentRequest request, Guid customerId)
     {
+        decimal deliveryCharge = CalculateDeliveryCharge(request.PackageType, request.WeightKg, request.PickupLat, request.PickupLng, request.DropLat, request.DropLng);
+        decimal taxableAmount = deliveryCharge + 20m;
+        decimal cgst = Math.Round(taxableAmount * 0.09m, 2);
+        decimal sgst = Math.Round(taxableAmount * 0.09m, 2);
+        decimal totalAmount = taxableAmount + cgst + sgst;
+
         var shipment = new Shipment
         {
             Id = Guid.NewGuid(),
@@ -75,6 +81,25 @@ public class ShipmentService : IShipmentService
             UpdatedAt = DateTime.UtcNow
         };
 
+        var payment = new Payment
+        {
+            Id = Guid.NewGuid(),
+            ShipmentId = shipment.Id,
+            Method = request.PaymentMethod,
+            Amount = totalAmount,
+            DeliveryCharge = deliveryCharge,
+            PlatformFee = 20m,
+            DriverCommission = Math.Round(deliveryCharge * 0.05m, 2),
+            DriverEarnings = Math.Round(deliveryCharge * 0.95m, 2),
+            Cgst = cgst,
+            Sgst = sgst,
+            Status = PaymentStatus.PENDING,
+            IdempotencyKey = $"pay_chk_{shipment.Id:N}",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        shipment.Payment = payment;
+
         if (!string.IsNullOrWhiteSpace(request.SpecialNotes))
         {
             var parsed = await _llmService.ParseDeliveryNoteAsync(request.SpecialNotes);
@@ -84,17 +109,6 @@ public class ShipmentService : IShipmentService
             shipment.PreferredDeliveryAfter = parsed.PreferredDeliveryAfter;
             shipment.DriverInstruction = parsed.DriverInstruction;
         }
-
-        var senderOtp = _otpService.GenerateOtp();
-        var receiverOtp = _otpService.GenerateOtp();
-
-        shipment.SenderOtpHash = _otpService.HashOtp(senderOtp);
-        shipment.SenderOtpExpiresAt = DateTime.UtcNow.AddMinutes(30);
-        shipment.SenderOtpAttempts = 0;
-
-        shipment.ReceiverOtpHash = _otpService.HashOtp(receiverOtp);
-        shipment.ReceiverOtpExpiresAt = DateTime.UtcNow.AddDays(1);
-        shipment.ReceiverOtpAttempts = 0;
 
         const int maxRetries = 3;
         int attempt = 0;
@@ -116,13 +130,6 @@ public class ShipmentService : IShipmentService
             }
         }
 
-        var customer = await _db.Users.FindAsync(customerId);
-        var customerEmail = customer?.Email ?? "customer@example.com";
-        var customerName = customer?.FullName ?? "Customer";
-
-        var (emailSubject, emailBody) = _emailTemplateService.GenerateShipmentConfirmation(shipment, customerName, senderOtp, receiverOtp);
-        await _emailService.SendEmailAsync(customerEmail, emailSubject, emailBody);
-
         await _notificationService.CreateNotificationAsync(customerId, shipment.Id, "Shipment Created", $"Your shipment {shipment.OrderId} has been created successfully.");
 
         if (request.PaymentMethod == PaymentMethod.COD)
@@ -132,7 +139,7 @@ public class ShipmentService : IShipmentService
 
         var paymentUrl = request.PaymentMethod == PaymentMethod.ONLINE ? $"https://razorpay.com/pay/{shipment.Id}" : null;
 
-        return shipment.ToCreateShipmentResponse(senderOtp, paymentUrl);
+        return shipment.ToCreateShipmentResponse(paymentUrl: paymentUrl);
     }
 
     public async Task<Shipment> GetRawByIdAsync(Guid id)
@@ -194,6 +201,11 @@ public class ShipmentService : IShipmentService
         }
 
         var refundInitiated = shipment.Status == ShipmentStatus.OPEN;
+        if (refundInitiated && shipment.Payment != null)
+        {
+            shipment.Payment.Status = PaymentStatus.REFUNDED;
+            shipment.Payment.UpdatedAt = DateTime.UtcNow;
+        }
         shipment.Status = ShipmentStatus.CANCELLED;
         shipment.StatusUpdatedAt = DateTime.UtcNow;
         shipment.StatusChangedBy = customerId;
@@ -268,6 +280,16 @@ public class ShipmentService : IShipmentService
         return eligibleShipments;
     }
 
+    public async Task<ShipmentResponse?> GetActiveShipmentAsync(Guid driverUserId)
+    {
+        var driver = await _driverRepo.GetByUserIdAsync(driverUserId);
+        if (driver == null)
+            throw new NotFoundException("Driver profile not found.");
+
+        var shipment = await _shipmentRepo.GetActiveShipmentForDriverAsync(driver.Id);
+        return shipment?.ToShipmentResponse();
+    }
+
     public async Task<ClaimShipmentResponse> ClaimAsync(Guid id, Guid driverUserId)
     {
         var driver = await _driverRepo.GetByUserIdAsync(driverUserId);
@@ -316,8 +338,43 @@ public class ShipmentService : IShipmentService
             shipment.StatusChangedBy = driver.UserId;
             shipment.UpdatedAt = DateTime.UtcNow;
 
+            var senderOtp = _otpService.GenerateOtp();
+            var receiverOtp = _otpService.GenerateOtp();
+
+            shipment.SenderOtpHash = _otpService.HashOtp(senderOtp);
+            shipment.SenderOtpExpiresAt = DateTime.UtcNow.AddMinutes(30);
+            shipment.SenderOtpAttempts = 0;
+
+            shipment.ReceiverOtpHash = _otpService.HashOtp(receiverOtp);
+            shipment.ReceiverOtpExpiresAt = DateTime.UtcNow.AddDays(1);
+            shipment.ReceiverOtpAttempts = 0;
+
             await _shipmentRepo.UpdateAsync(shipment);
             await transaction.CommitAsync();
+
+            var customer = await _db.Users.FindAsync(shipment.CustomerId);
+            var customerEmail = customer?.Email ?? "customer@example.com";
+            var customerName = customer?.FullName ?? "Customer";
+
+            var driverUser = await _db.Users.FindAsync(driver.UserId);
+            var driverName = driverUser?.FullName ?? "Driver";
+            var vehicleNumber = activeVehicle.VehicleNumber;
+            var vehicleType = activeVehicle.VehicleType.ToString();
+
+            var (emailSubject, emailBody) = _emailTemplateService.GenerateDriverAssignedNotification(
+                shipment, customerName, driverName, vehicleNumber, vehicleType, senderOtp, receiverOtp);
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _emailService.SendEmailAsync(customerEmail, emailSubject, emailBody);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send driver assignment email to {Email}", customerEmail);
+                }
+            });
 
             await _notificationService.CreateNotificationAsync(shipment.CustomerId, shipment.Id, "Driver Assigned", $"A driver has been assigned to your shipment {shipment.OrderId}.");
             await _notificationService.BroadcastShipmentUpdateAsync(shipment.Id, "ASSIGNED", new { shipment.DriverId, shipment.OrderId });
@@ -750,5 +807,48 @@ public class ShipmentService : IShipmentService
         }
 
         return false;
+    }
+
+    public PriceEstimationResponse EstimatePrice(PriceEstimationRequest request)
+    {
+        decimal deliveryCharge = CalculateDeliveryCharge(request.PackageType, request.WeightKg, request.PickupLat, request.PickupLng, request.DropLat, request.DropLng);
+        decimal cgst = Math.Round(deliveryCharge * 0.09m, 2);
+        decimal sgst = Math.Round(deliveryCharge * 0.09m, 2);
+        decimal totalAmount = deliveryCharge + cgst + sgst;
+
+        return new PriceEstimationResponse
+        {
+            DeliveryCharge = deliveryCharge,
+            Cgst = cgst,
+            Sgst = sgst,
+            TotalAmount = totalAmount
+        };
+    }
+
+    private decimal CalculateDeliveryCharge(PackageType packageType, decimal weightKg, decimal pickupLat, decimal pickupLng, decimal dropLat, decimal dropLng)
+    {
+        double distanceKm = _geoService.CalculateDistance(pickupLat, pickupLng, dropLat, dropLng);
+
+        decimal baseFare = packageType switch
+        {
+            PackageType.DOCUMENT => 40.00m,
+            PackageType.SMALL_PARCEL => 60.00m,
+            PackageType.LARGE_PARCEL => 100.00m,
+            PackageType.FRAGILE => 120.00m,
+            PackageType.HOUSEHOLD => 250.00m,
+            _ => 50.00m
+        };
+
+        decimal perKmRate = 12.00m;
+        decimal distanceCharge = (decimal)distanceKm * perKmRate;
+
+        decimal weightSurcharge = 0m;
+        if (weightKg > 2.0m)
+        {
+            weightSurcharge = (weightKg - 2.0m) * 5.00m;
+        }
+
+        decimal deliveryCharge = baseFare + distanceCharge + weightSurcharge;
+        return Math.Round(deliveryCharge, 2);
     }
 }

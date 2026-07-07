@@ -223,9 +223,25 @@ namespace Logistics.Api.Migrations
                         .HasColumnType("numeric(10,2)")
                         .HasColumnName("amount");
 
+                    b.Property<decimal>("Cgst")
+                        .HasColumnType("numeric")
+                        .HasColumnName("cgst");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<decimal>("DeliveryCharge")
+                        .HasColumnType("numeric")
+                        .HasColumnName("delivery_charge");
+
+                    b.Property<decimal>("DriverCommission")
+                        .HasColumnType("numeric")
+                        .HasColumnName("driver_commission");
+
+                    b.Property<decimal>("DriverEarnings")
+                        .HasColumnType("numeric")
+                        .HasColumnName("driver_earnings");
 
                     b.Property<string>("IdempotencyKey")
                         .HasColumnType("text")
@@ -235,6 +251,22 @@ namespace Logistics.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("method");
+
+                    b.Property<decimal>("PlatformFee")
+                        .HasColumnType("numeric")
+                        .HasColumnName("platform_fee");
+
+                    b.Property<string>("RazorpayOrderId")
+                        .HasColumnType("text")
+                        .HasColumnName("razorpay_order_id");
+
+                    b.Property<string>("RazorpayPaymentId")
+                        .HasColumnType("text")
+                        .HasColumnName("razorpay_payment_id");
+
+                    b.Property<decimal>("Sgst")
+                        .HasColumnType("numeric")
+                        .HasColumnName("sgst");
 
                     b.Property<Guid>("ShipmentId")
                         .HasColumnType("uuid")
@@ -530,9 +562,11 @@ namespace Logistics.Api.Migrations
                         .HasDatabaseName("ix_users_auth0id");
 
                     b.HasIndex("Email")
+                        .IsUnique()
                         .HasDatabaseName("ix_users_email");
 
                     b.HasIndex("Phone")
+                        .IsUnique()
                         .HasDatabaseName("ix_users_phone");
 
                     b.ToTable("users", (string)null);

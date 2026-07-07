@@ -37,6 +37,9 @@ public class AuthServiceTests : IDisposable
         _userRepoMock = new Mock<IUserRepository>();
         _driverRepoMock = new Mock<IDriverRepository>();
 
+        _userRepoMock.Setup(r => r.ExistsByEmailAsync(It.IsAny<string>())).ReturnsAsync(false);
+        _userRepoMock.Setup(r => r.ExistsByPhoneAsync(It.IsAny<string>())).ReturnsAsync(false);
+
         _service = new AuthService(
             _userRepoMock.Object,
             _driverRepoMock.Object,
@@ -102,7 +105,7 @@ public class AuthServiceTests : IDisposable
             FullName = "Driver Name", 
             Email = "email@example.com", 
             Phone = "123", 
-            LicenseNumber = "TN33AB9999" 
+            LicenseNumber = "TN33 20230012345" 
         };
 
         var result = await _service.RegisterDriverAsync(request);
@@ -118,7 +121,7 @@ public class AuthServiceTests : IDisposable
         )), Times.Once);
 
         _driverRepoMock.Verify(r => r.AddAsync(It.Is<Driver>(d => 
-            d.LicenseNumber == "TN33AB9999" && 
+            d.LicenseNumber == "TN33 20230012345" && 
             d.ApprovalStatus == ApprovalStatus.PENDING
         )), Times.Once);
     }
@@ -134,7 +137,7 @@ public class AuthServiceTests : IDisposable
             FullName = "Driver Name", 
             Email = "email@example.com", 
             Phone = "123", 
-            LicenseNumber = "TN33AB9999" 
+            LicenseNumber = "TN33 20230012345" 
         };
 
         _driverRepoMock.Setup(r => r.AddAsync(It.IsAny<Driver>())).ThrowsAsync(new Exception("Database crash"));
@@ -143,5 +146,45 @@ public class AuthServiceTests : IDisposable
 
         var usersCount = await _db.Users.CountAsync();
         Assert.Equal(0, usersCount);
+    }
+
+    [Fact]
+    public async Task RegisterCustomerAsync_EmailExists_ThrowsConflictException()
+    {
+        var email = "duplicate@example.com";
+        _userRepoMock.Setup(r => r.ExistsByEmailAsync(email)).ReturnsAsync(true);
+        var request = new RegisterCustomerRequest { Auth0Id = "a1", FullName = "Name", Email = email, Phone = "p" };
+
+        await Assert.ThrowsAsync<ConflictException>(() => _service.RegisterCustomerAsync(request));
+    }
+
+    [Fact]
+    public async Task RegisterCustomerAsync_PhoneExists_ThrowsConflictException()
+    {
+        var phone = "12345";
+        _userRepoMock.Setup(r => r.ExistsByPhoneAsync(phone)).ReturnsAsync(true);
+        var request = new RegisterCustomerRequest { Auth0Id = "a1", FullName = "Name", Email = "e", Phone = phone };
+
+        await Assert.ThrowsAsync<ConflictException>(() => _service.RegisterCustomerAsync(request));
+    }
+
+    [Fact]
+    public async Task RegisterDriverAsync_EmailExists_ThrowsConflictException()
+    {
+        var email = "duplicate@example.com";
+        _userRepoMock.Setup(r => r.ExistsByEmailAsync(email)).ReturnsAsync(true);
+        var request = new RegisterDriverRequest { Auth0Id = "a1", FullName = "Name", Email = email, Phone = "p", LicenseNumber = "TN33 20230012345" };
+
+        await Assert.ThrowsAsync<ConflictException>(() => _service.RegisterDriverAsync(request));
+    }
+
+    [Fact]
+    public async Task RegisterDriverAsync_PhoneExists_ThrowsConflictException()
+    {
+        var phone = "12345";
+        _userRepoMock.Setup(r => r.ExistsByPhoneAsync(phone)).ReturnsAsync(true);
+        var request = new RegisterDriverRequest { Auth0Id = "a1", FullName = "Name", Email = "e", Phone = phone, LicenseNumber = "TN33 20230012345" };
+
+        await Assert.ThrowsAsync<ConflictException>(() => _service.RegisterDriverAsync(request));
     }
 }

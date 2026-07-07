@@ -1,0 +1,213 @@
+<div class="tracking-container">
+  @if (isLoading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading tracking details...</p>
+    </div>
+  } @else if (errorMessage()) {
+    <div class="error-state">
+      <p class="error-msg">{{ errorMessage() }}</p>
+      <button (click)="loadShipmentDetails()" class="btn-retry">Retry</button>
+    </div>
+  } @else if (shipment()) {
+    <div class="tracking-layout">
+      <!-- Left: Map Container -->
+      <div class="map-container">
+        <div id="map"></div>
+      </div>
+
+      <!-- Right: Detailed Status Timeline & Action Panel -->
+      <div class="details-panel">
+        <div class="panel-header">
+          <div class="title-row">
+            <span class="order-id">{{ shipment()?.orderId }}</span>
+            <span class="status-badge" [attr.data-status]="shipment()?.status">{{ shipment()?.status }}</span>
+          </div>
+          <p class="created-at">Placed on {{ shipment()?.createdAt | date:'medium' }}</p>
+        </div>
+
+        <div class="panel-section">
+          <h3 class="section-title">Route</h3>
+          <div class="route-details">
+            <div class="route-item">
+              <span class="dot pickup-dot"></span>
+              <div class="route-info">
+                <span class="route-label">Pickup Address</span>
+                <p class="route-text">{{ shipment()?.pickupAddress }}</p>
+              </div>
+            </div>
+            <div class="route-item">
+              <span class="dot drop-dot"></span>
+              <div class="route-info">
+                <span class="route-label">Drop Address</span>
+                <p class="route-text">{{ shipment()?.dropAddress }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Driver Info (if assigned) -->
+        @if (shipment()?.driver) {
+          <div class="panel-section driver-section">
+            <h3 class="section-title">Driver Details</h3>
+            <div class="driver-card">
+              <div class="driver-avatar">👨🏻‍✈️</div>
+              <div class="driver-info">
+                <span class="driver-name">{{ shipment()?.driver?.fullName }}</span>
+                <span class="driver-vehicle">{{ shipment()?.driver?.vehicleType }} • {{ shipment()?.driver?.vehicleNumber }}</span>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Package Info -->
+        <div class="panel-section row-section">
+          <div class="info-block">
+            <span class="info-label">Package Type</span>
+            <span class="info-val">{{ shipment()?.packageType }}</span>
+          </div>
+          <div class="info-block">
+            <span class="info-label">Weight</span>
+            <span class="info-val">{{ shipment()?.weightKg }} Kg</span>
+          </div>
+        </div>
+
+        <!-- Billing Details -->
+        <div class="panel-section">
+          <h3 class="section-title">Payment & Billing</h3>
+          <div class="billing-summary" style="background: #171717; border: 1px solid #262626; border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="color: #A3A3A3;">Delivery Charge</span>
+              <span>₹{{ shipment()?.deliveryCharge | number:'1.2-2' }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="color: #A3A3A3;">Platform Fee</span>
+              <span>₹{{ shipment()?.platformFee | number:'1.2-2' }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="color: #A3A3A3;">CGST (9%)</span>
+              <span>₹{{ shipment()?.cgst | number:'1.2-2' }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="color: #A3A3A3;">SGST (9%)</span>
+              <span>₹{{ shipment()?.sgst | number:'1.2-2' }}</span>
+            </div>
+            <div style="height: 1px; background: #262626; margin: 4px 0;"></div>
+            <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; color: #E8A845;">
+              <span>Total Amount</span>
+              <span>₹{{ shipment()?.totalAmount | number:'1.2-2' }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #737373; margin-top: 4px;">
+              <span>Method: {{ shipment()?.paymentMethod }}</span>
+              <span>Status: {{ shipment()?.paymentStatus }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security Banner -->
+        <div class="security-banner">
+          <p class="security-title">🔐 Secure Delivery Verification</p>
+          <p class="security-desc">
+            A confirmation email was sent containing your secure OTPs. 
+            Give the <strong>Pickup OTP</strong> to your driver when they arrive.
+            Ensure the recipient is ready with the <strong>Delivery OTP</strong>.
+          </p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="panel-actions">
+          @if (shipment()?.status === 'PENDING_PAYMENT' || shipment()?.status === 'OPEN') {
+            <button (click)="openEditModal()" class="btn-edit-shipment">Edit Instructions</button>
+          }
+          @if (shipment()?.status === 'OPEN' || shipment()?.status === 'ASSIGNED') {
+            <button (click)="cancelShipment()" class="btn-danger">Cancel Shipment</button>
+          } @else if (shipment()?.status === 'DELIVERED') {
+            <button (click)="openDispute()" class="btn-warning">Raise a Dispute</button>
+          }
+          <a routerLink="/customer/shipments" class="btn-back">Back to Shipments</a>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Dispute Modal -->
+@if (showDisputeModal()) {
+  <div class="modal-overlay">
+    <div class="dispute-modal">
+      <h3 class="modal-title">Raise a Dispute</h3>
+      <p class="modal-desc">Describe your issue with this shipment. An administrator will review and resolve it.</p>
+
+      @if (disputeSuccess()) {
+        <div class="success-banner">Dispute submitted successfully! Closing...</div>
+      } @else {
+        <form [formGroup]="disputeForm" (ngSubmit)="submitDispute()" class="dispute-form">
+          @if (disputeError()) {
+            <div class="error-banner">{{ disputeError() }}</div>
+          }
+          <div class="form-group">
+            <label for="complaintText">Complaint Details</label>
+            <textarea 
+              id="complaintText" 
+              formControlName="complaintText" 
+              placeholder="Provide a detailed description of the issue (minimum 10 characters)..." 
+              rows="5"></textarea>
+            <div *ngIf="disputeForm.get('complaintText')?.touched && disputeForm.get('complaintText')?.invalid" class="validation-error">
+              Please enter between 10 and 1000 characters.
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" (click)="closeDispute()" class="btn-cancel" [disabled]="isDisputeSubmitting()">Cancel</button>
+            <button type="submit" class="btn-submit-dispute" [disabled]="disputeForm.invalid || isDisputeSubmitting()">
+              {{ isDisputeSubmitting() ? 'Submitting...' : 'Submit Dispute' }}
+            </button>
+          </div>
+        </form>
+      }
+    </div>
+  </div>
+}
+
+<!-- Edit Shipment Modal -->
+@if (showEditModal()) {
+  <div class="modal-overlay">
+    <div class="dispute-modal">
+      <h3 class="modal-title">Edit Delivery Instructions</h3>
+      <p class="modal-desc">Update your preferred delivery window and special instructions.</p>
+
+      <form [formGroup]="editForm" (ngSubmit)="submitEdit()" class="dispute-form">
+        @if (editError()) {
+          <div class="error-banner">{{ editError() }}</div>
+        }
+        <div class="form-group">
+          <label for="preferredWindow">Preferred Delivery Window</label>
+          <select id="preferredWindow" formControlName="preferredWindow" class="form-select">
+            <option value="MORNING">Morning (8 AM - 12 PM)</option>
+            <option value="AFTERNOON">Afternoon (12 PM - 4 PM)</option>
+            <option value="EVENING">Evening (4 PM - 8 PM)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="specialNotes">Special Notes / Instructions</label>
+          <textarea 
+            id="specialNotes" 
+            formControlName="specialNotes" 
+            placeholder="Add delivery instructions, gate codes, or receiver notes (maximum 500 characters)..." 
+            rows="4"></textarea>
+          <div *ngIf="editForm.get('specialNotes')?.touched && editForm.get('specialNotes')?.invalid" class="validation-error">
+            Maximum length is 500 characters.
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" (click)="closeEditModal()" class="btn-cancel" [disabled]="isSaving()">Cancel</button>
+          <button type="submit" class="btn-submit-dispute" [disabled]="editForm.invalid || isSaving()">
+            {{ isSaving() ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

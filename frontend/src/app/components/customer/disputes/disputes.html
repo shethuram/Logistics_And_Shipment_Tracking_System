@@ -1,0 +1,67 @@
+<div class="disputes-container">
+  <div class="main-disputes">
+    <div class="disputes-header">
+      <h1 class="disputes-title">Dispute History</h1>
+      <p class="disputes-subtitle">Track your filed complaints and customer support resolutions</p>
+    </div>
+
+    @if (isLoading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <span>Loading disputes history...</span>
+      </div>
+    } @else if (errorMessage()) {
+      <div class="error-state">
+        <p>{{ errorMessage() }}</p>
+        <button class="btn-retry" (click)="loadDisputes()">Retry</button>
+      </div>
+    } @else if (disputes().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon">📂</div>
+        <h3>No disputes raised yet</h3>
+        <p>If you have any issues with a delivery, you can raise a dispute directly from that shipment's details page.</p>
+        <a routerLink="/customer/shipments" class="btn-view-shipments">View My Shipments</a>
+      </div>
+    } @else {
+      <div class="disputes-list">
+        @for (dispute of disputes(); track dispute.id) {
+          <div class="dispute-card" [class.expanded]="expandedDisputeId() === dispute.id">
+            <div class="dispute-card-header" (click)="toggleExpand(dispute.id)">
+              <div class="dispute-meta">
+                <span class="order-id">Order ID: {{ dispute.orderId }}</span>
+                <span class="dispute-date">{{ dispute.createdAt | date:'mediumDate' }}</span>
+              </div>
+              <div class="dispute-badge-container">
+                <span class="badge-status" [attr.data-status]="dispute.status">
+                  {{ dispute.status }}
+                </span>
+                <span class="expand-arrow">▼</span>
+              </div>
+            </div>
+
+            <div class="dispute-card-body">
+              <div class="dispute-detail-row">
+                <span class="detail-label">Complaint:</span>
+                <p class="detail-text">{{ dispute.complaintText }}</p>
+              </div>
+
+              @if (dispute.status === 'RESOLVED' && dispute.resolutionNotes) {
+                <div class="dispute-detail-row resolution-box">
+                  <span class="detail-label">Resolution Notes:</span>
+                  <p class="detail-text">{{ dispute.resolutionNotes }}</p>
+                  <span class="resolved-date">Resolved on {{ dispute.resolvedAt | date:'mediumDate' }}</span>
+                </div>
+              }
+
+              <div class="dispute-actions">
+                <a [routerLink]="['/customer/shipments', dispute.shipmentId]" class="btn-link-shipment">
+                  View Shipment Details →
+                </a>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

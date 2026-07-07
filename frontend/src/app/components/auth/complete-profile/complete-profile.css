@@ -1,0 +1,127 @@
+.profile-container {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  background-color: #0F0F0F;
+  color: #F5F4F0;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Inter', sans-serif;
+  box-sizing: border-box;
+  padding: 20px;
+}
+
+.form-box {
+  width: 100%;
+  max-width: 400px;
+  background-color: #171717;
+  border: 1px solid #262626;
+  border-radius: 6px;
+  padding: 40px;
+  box-sizing: border-box;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: #737373;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #A3A3A3;
+  margin: 0 0 24px 0;
+  line-height: 1.4;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #D4D4D8;
+}
+
+.form-control {
+  background-color: #0F0F0F;
+  border: 1px solid #262626;
+  color: #F5F4F0;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #E8A845;
+}
+
+.form-control.is-invalid {
+  border-color: #ef4444;
+}
+
+.error-text {
+  font-size: 11px;
+  color: #ef4444;
+  margin-top: 2px;
+}
+
+.alert-error {
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.btn-submit {
+  background-color: #E8A845;
+  color: #0F0F0F;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+}
+
+.btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.form-control.readonly-input {
+  background-color: #1a1a1a;
+  border-color: #2a2a2a;
+  color: #8a8a8a;
+  cursor: not-allowed;
+}
