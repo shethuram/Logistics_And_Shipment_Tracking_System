@@ -1,0 +1,89 @@
+@if (session.isAuthenticated() && session.isRegistered()) {
+  <nav class="navbar">
+    <div class="nav-container">
+      <a routerLink="/" class="logo">
+        <span class="logo-accent">Cargo</span>Z
+      </a>
+
+      <div class="nav-links">
+        @if (session.role() === 'CUSTOMER') {
+          <a routerLink="/customer/book" routerLinkActive="active" class="nav-link">Book Shipment</a>
+          <a routerLink="/customer/shipments" routerLinkActive="active" class="nav-link">My Shipments</a>
+          <a routerLink="/customer/disputes" routerLinkActive="active" class="nav-link">My Disputes</a>
+        }
+
+        @if (session.role() === 'DRIVER') {
+          <a routerLink="/driver/jobs" routerLinkActive="active" class="nav-link">Available Jobs</a>
+          <a routerLink="/driver/active" routerLinkActive="active" class="nav-link">Active Delivery</a>
+          <a routerLink="/driver/vehicles" routerLinkActive="active" class="nav-link">My Vehicles</a>
+        }
+
+        @if (session.role() === 'ADMIN') {
+          <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-link">Admin Dashboard</a>
+        }
+      </div>
+
+      <div class="notifications-wrapper">
+        <button class="btn-bell" (click)="toggleDropdown()" aria-label="Notifications">
+          🔔
+          @if (unreadCount() > 0) {
+            <span class="bell-badge">{{ unreadCount() }}</span>
+          }
+        </button>
+
+        @if (showDropdown()) {
+          <div class="notifications-dropdown-backdrop" (click)="closeDropdown()"></div>
+          <div class="notifications-dropdown">
+            <div class="dropdown-header">
+              <h3>Notifications</h3>
+            </div>
+            <div class="dropdown-body">
+              @if (notifications().length === 0) {
+                <div class="dropdown-empty">No alerts yet</div>
+              } @else {
+                @for (n of notifications(); track n.id) {
+                  <div class="notification-item" [class.unread]="!n.isRead" (click)="onNotificationClick(n)">
+                    <h4 class="notification-item-title">{{ n.title }}</h4>
+                    <p class="notification-item-msg">{{ n.message }}</p>
+                    <span class="notification-item-time">{{ n.createdAt | date:'shortTime' }}</span>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="nav-user">
+        <span class="user-name">{{ session.profile()?.fullName }}</span>
+        <button (click)="session.logout()" class="btn-logout-nav">Log Out</button>
+      </div>
+
+      <button class="mobile-toggle" (click)="toggleMobileMenu()" aria-label="Toggle menu">
+        <span class="hamburger" [class.open]="isMobileMenuOpen()"></span>
+      </button>
+    </div>
+
+    <div class="mobile-drawer" [class.open]="isMobileMenuOpen()">
+      <div class="mobile-drawer-links">
+        @if (session.role() === 'CUSTOMER') {
+          <a routerLink="/customer/book" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-link">Book Shipment</a>
+          <a routerLink="/customer/shipments" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-link">My Shipments</a>
+          <a routerLink="/customer/disputes" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-link">My Disputes</a>
+        }
+
+        @if (session.role() === 'DRIVER') {
+          <a routerLink="/driver/jobs" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-link">Available Jobs</a>
+        }
+
+        @if (session.role() === 'ADMIN') {
+          <a routerLink="/admin/dashboard" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-link">Admin Dashboard</a>
+        }
+
+        <div class="mobile-divider"></div>
+        <span class="mobile-user">{{ session.profile()?.fullName }}</span>
+        <button (click)="session.logout(); closeMobileMenu();" class="btn-logout-mobile">Log Out</button>
+      </div>
+    </div>
+  </nav>
+}

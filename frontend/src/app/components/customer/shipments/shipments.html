@@ -1,0 +1,116 @@
+<div class="shipments-container">
+  <div class="main-shipments">
+    <div class="shipments-header">
+      <h2 class="shipments-title">Your Shipments</h2>
+      <a routerLink="/customer/book" class="btn-book-new">+ Book Shipment</a>
+    </div>
+
+    <div class="filter-bar">
+      <div class="filter-group search-group">
+        <input 
+          type="text" 
+          placeholder="Search by Order ID, receiver..." 
+          class="form-input search-input" 
+          (input)="onSearchChange($any($event.target).value)" />
+      </div>
+
+      <div class="filter-group">
+        <select class="form-select status-select" (change)="onStatusChange($any($event.target).value)">
+          <option value="">All Statuses</option>
+          @for (opt of statusOptions(); track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filter-group date-group">
+        <input 
+          type="date" 
+          class="form-input date-input" 
+          (change)="onDateFromChange($any($event.target).value)" />
+        <span class="date-to-sep">to</span>
+        <input 
+          type="date" 
+          class="form-input date-input" 
+          (change)="onDateToChange($any($event.target).value)" />
+      </div>
+    </div>
+
+    @if (errorMessage()) {
+      <div class="error-banner">
+        {{ errorMessage() }}
+      </div>
+    }
+
+    @if (isLoading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading your shipments...</p>
+      </div>
+    } @else {
+      @if (shipments().length === 0) {
+        <div class="empty-state">
+          <p class="empty-msg">You haven't booked any shipments yet.</p>
+          <a routerLink="/customer/book" class="btn-primary-action">Book Your First Shipment</a>
+        </div>
+      } @else {
+        <div class="shipments-list">
+          @for (shipment of shipments(); track shipment.id) {
+            <div class="shipment-card" [routerLink]="['/customer/shipments', shipment.id]" style="cursor: pointer;">
+              <div class="card-header">
+                <span class="order-id">{{ shipment.orderId }}</span>
+                <div class="status-badges-group" style="display: flex; gap: 8px; align-items: center;">
+                  <span class="status-badge" [attr.data-status]="shipment.status">
+                    {{ shipment.status }}
+                  </span>
+                  <span class="status-badge" [attr.data-status]="shipment.paymentStatus">
+                    Pay: {{ shipment.paymentStatus }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="card-body">
+                <div class="address-row">
+                  <span class="dot pickup-dot"></span>
+                  <div class="address-details">
+                    <span class="address-label">Pickup:</span>
+                    <p class="address-text">{{ shipment.pickupAddress }}</p>
+                  </div>
+                </div>
+
+                <div class="address-row">
+                  <span class="dot drop-dot"></span>
+                  <div class="address-details">
+                    <span class="address-label">Destination:</span>
+                    <p class="address-text">{{ shipment.dropAddress }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-footer">
+                <span class="package-type">{{ shipment.packageType }}</span>
+                <span class="divider">•</span>
+                <span class="weight">{{ shipment.weightKg }} Kg</span>
+                <span class="divider">•</span>
+                <span class="price-amount" style="color: #E8A845; font-weight: 600;">₹{{ shipment.totalAmount | number:'1.2-2' }}</span>
+                <span class="divider">•</span>
+                <span class="date">{{ shipment.createdAt | date:'shortDate' }}</span>
+              </div>
+
+              @if (shipment.status === 'PENDING_PAYMENT') {
+                <div class="card-actions" style="margin-top: 12px; border-top: 1px solid #262626; padding-top: 12px; display: flex; justify-content: flex-end; width: 100%;">
+                  <button 
+                    class="btn-pay-now" 
+                    style="background-color: #E8A845; color: #0F0F0F; border: none; border-radius: 4px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; transition: background-color 0.2s ease;"
+                    (click)="payNow(shipment.id); $event.stopPropagation()">
+                    Pay Now
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+  </div>
+</div>

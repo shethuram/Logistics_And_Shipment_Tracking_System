@@ -44,6 +44,14 @@ public class DisputesController : ControllerBase
         return CreatedAtAction(nameof(RaiseDispute), new { id = result.Id }, result);
     }
 
+    [HttpGet("api/disputes/my")]
+    [Authorize(Roles = "CUSTOMER")]
+    public async Task<IActionResult> GetMyDisputes()
+    {
+        var result = await _disputeService.GetMyDisputesAsync(_currentUser.Id);
+        return Ok(result);
+    }
+
     [HttpGet("api/admin/disputes")]
     [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> GetDisputes(

@@ -1,0 +1,158 @@
+<div class="jobs-container">
+  <div class="main-jobs">
+    
+    <div class="header-row">
+      <h1 class="header-title">Active Delivery Tracker</h1>
+    </div>
+
+    @if (errorMessage()) {
+      <div class="alert-box">
+        {{ errorMessage() }}
+      </div>
+    }
+
+    <div class="active-delivery-card">
+      @if (activeShipment(); as job) {
+        <div class="job-header">
+          <span class="order-id">Active Order: {{ job.orderId }}</span>
+          <span class="earnings-payout">Earnings: ₹{{ job.driverEarnings | number:'1.2-2' }}</span>
+        </div>
+
+        <div class="status-indicator-bar">
+          <span>Current Status: {{ job.status }}</span>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Receiver Name</span>
+            <span class="info-value">{{ job.receiverName }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Receiver Phone</span>
+            <span class="info-value">{{ job.receiverPhone }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Payment Method</span>
+            <span class="info-value">{{ job.paymentMethod }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Package Weight</span>
+            <span class="info-value">{{ job.weightKg }} kg</span>
+          </div>
+        </div>
+
+        <div class="job-route">
+          <div class="route-stop pickup">
+            <span class="stop-label">Pickup Location</span>
+            <span class="stop-address">{{ job.pickupAddress }}</span>
+          </div>
+          <div class="route-stop drop">
+            <span class="stop-label">Dropoff Location</span>
+            <span class="stop-address">{{ job.dropAddress }}</span>
+          </div>
+        </div>
+
+        @if (job.status === 'ASSIGNED') {
+          <div class="otp-form-box">
+            <h3 class="otp-title">Sender Pickup Verification</h3>
+            <div class="otp-input-row">
+              <input 
+                type="text" 
+                class="otp-input" 
+                placeholder="OTP"
+                maxlength="6"
+                [value]="otpCode()"
+                (input)="otpCode.set($any($event.target).value)"
+              />
+              <button 
+                class="btn-matte" 
+                [disabled]="isLoading() || otpCode().length < 4"
+                (click)="pickupVerify()">
+                Verify & Start Transit
+              </button>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button class="btn-outline" (click)="showFailureReasonModal.set(true)">Mark Pickup Failed</button>
+            <button class="btn-danger" (click)="releaseClaim()">Release Shipment Claim</button>
+          </div>
+        }
+
+        @if (job.status === 'IN_TRANSIT') {
+          <div class="simulator-map-box">
+            <div class="map-placeholder">
+              <div class="pulse-dot"></div>
+              <span>Reporting Coordinates to Client Tracking Link...</span>
+            </div>
+          </div>
+
+          <div class="otp-form-box">
+            <h3 class="otp-title">Receiver Delivery Verification</h3>
+            <div class="otp-input-row">
+              <input 
+                type="text" 
+                class="otp-input" 
+                placeholder="OTP"
+                maxlength="6"
+                [value]="otpCode()"
+                (input)="otpCode.set($any($event.target).value)"
+              />
+              <button 
+                class="btn-matte" 
+                [disabled]="isLoading() || otpCode().length < 4"
+                (click)="deliveryVerify()">
+                Verify & Mark Delivered
+              </button>
+            </div>
+          </div>
+        }
+
+        @if (job.status === 'DELIVERED' && job.paymentMethod === 'COD' && job.paymentStatus !== 'PAID') {
+          <div class="otp-form-box">
+            <h3 class="otp-title">Cash Collection Required</h3>
+            <p>Please collect ₹{{ job.totalAmount | number:'1.2-2' }} from the receiver before completing the trip.</p>
+            <button class="btn-matte" [disabled]="isLoading()" (click)="cashCollectedVerify()">
+              Confirm Cash Collected
+            </button>
+          </div>
+        }
+      } @else {
+        <div class="content-placeholder">
+          <p>You have no active claimed deliveries currently.</p>
+          <button class="btn-matte" (click)="browseJobs()">Browse Shipments</button>
+        </div>
+      }
+    </div>
+
+  </div>
+</div>
+
+@if (showFailureReasonModal()) {
+  <div class="modal-backdrop">
+    <div class="modal-content">
+      <h2 class="modal-title">Report Pickup Failure</h2>
+      
+      <div class="form-group">
+        <label class="form-label">Reason for Failure</label>
+        <textarea 
+          class="form-textarea" 
+          rows="3" 
+          placeholder="e.g. Customer was not reachable at pickup location"
+          [value]="failureReason()"
+          (input)="failureReason.set($any($event.target).value)">
+        </textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-outline" (click)="showFailureReasonModal.set(false)">Cancel</button>
+        <button 
+          class="btn-matte" 
+          [disabled]="isLoading() || !failureReason()"
+          (click)="pickupFailedSubmit()">
+          Submit Failure Report
+        </button>
+      </div>
+    </div>
+  </div>
+}

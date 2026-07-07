@@ -8,6 +8,7 @@ public static class NotificationMappings
     public static NotificationDto ToNotificationDto(this Notification n) => new()
     {
         Id = n.Id,
+        ShipmentId = n.ShipmentId,
         Title = n.Title,
         Message = n.Message,
         IsRead = n.IsRead,

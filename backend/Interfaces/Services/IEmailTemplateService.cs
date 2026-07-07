@@ -4,5 +4,12 @@ namespace Logistics.Api.Interfaces.Services;
 
 public interface IEmailTemplateService
 {
-    (string Subject, string Body) GenerateShipmentConfirmation(Shipment shipment, string customerName, string senderOtp, string receiverOtp);
+    (string Subject, string Body) GenerateDriverAssignedNotification(
+        Shipment shipment,
+        string customerName,
+        string driverName,
+        string vehicleNumber,
+        string vehicleType,
+        string senderOtp,
+        string receiverOtp);
 }

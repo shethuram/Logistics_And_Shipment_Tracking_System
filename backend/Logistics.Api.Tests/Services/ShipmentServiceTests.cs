@@ -58,7 +58,8 @@ public class ShipmentServiceTests : IDisposable
         _emailTemplateServiceMock = new Mock<IEmailTemplateService>();
 
         _emailTemplateServiceMock
-            .Setup(t => t.GenerateShipmentConfirmation(It.IsAny<Shipment>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Setup(t => t.GenerateDriverAssignedNotification(
+                It.IsAny<Shipment>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Returns(("Subject", "Body"));
 
         _service = new ShipmentService(
@@ -101,14 +102,11 @@ public class ShipmentServiceTests : IDisposable
         _llmServiceMock.Setup(l => l.ParseDeliveryNoteAsync("Careful"))
             .ReturnsAsync((false, RiskSeverity.NONE, null, null, "Careful Instruction"));
 
-        _otpServiceMock.Setup(o => o.GenerateOtp()).Returns("1234");
-
         var result = await _service.CreateAsync(request, customerId);
 
         Assert.NotNull(result);
         Assert.Equal(ShipmentStatus.OPEN, result.Status);
         Assert.Null(result.PaymentUrl);
-        Assert.Equal("1234", result.SenderOtp);
 
         _shipmentRepoMock.Verify(r => r.AddAsync(It.Is<Shipment>(s => 
             s.Status == ShipmentStatus.OPEN && 
@@ -120,7 +118,6 @@ public class ShipmentServiceTests : IDisposable
         _notificationServiceMock.Verify(n => n.CreateNotificationAsync(customerId, It.IsAny<Guid>(), "Shipment Created", It.IsAny<string>()), Times.Once);
         _notificationServiceMock.Verify(n => n.BroadcastNewJobAlertAsync("TWO_WHEELER", It.IsAny<object>()), Times.Once);
         _notificationServiceMock.Verify(n => n.BroadcastNewJobAlertAsync("THREE_WHEELER", It.IsAny<object>()), Times.Once);
-        _emailServiceMock.Verify(m => m.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
@@ -128,11 +125,8 @@ public class ShipmentServiceTests : IDisposable
     {
 
         var request = new CreateShipmentRequest { PackageType = PackageType.SMALL_PARCEL, PaymentMethod = PaymentMethod.ONLINE };
-        _otpServiceMock.Setup(o => o.GenerateOtp()).Returns("1234");
 
         var result = await _service.CreateAsync(request, Guid.NewGuid());
-
-        _emailServiceMock.Verify(m => m.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
 
         Assert.Equal(ShipmentStatus.PENDING_PAYMENT, result.Status);
         Assert.NotNull(result.PaymentUrl);

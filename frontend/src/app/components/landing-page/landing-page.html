@@ -1,0 +1,106 @@
+<div class="landing-container">
+  <div class="upper-content">
+    <div class="column-left">
+      <div class="top-section">
+        <span class="label">LOGISTICS PLATFORM</span>
+        <h1 class="logo">CargoZ</h1>
+        <p class="tagline">Real-time tracking, seamless logistics, and reliable delivery services.</p>
+      </div>
+
+      <div class="middle-section">
+        <span class="label">PORTAL ACCESS</span>
+        <div class="button-stack">
+          <button class="btn-primary" (click)="becomeCustomer()">
+            Become a Customer <span class="arrow">→</span>
+          </button>
+          <button class="btn-secondary" (click)="becomeDriver()">
+            Become a Driver <span class="arrow">→</span>
+          </button>
+        </div>
+        <a class="link-login" (click)="login()">Already registered? Log in →</a>
+      </div>
+
+      <div class="bottom-section">
+        <a class="link-admin" (click)="adminLogin()">Admin Portal →</a>
+      </div>
+    </div>
+
+    <div class="column-right">
+      <div class="floating-card">
+        <span class="label">TRACK A SHIPMENT</span>
+
+        <form [formGroup]="trackForm" (ngSubmit)="trackPackage()" class="track-form">
+          <div class="form-group">
+            <input type="text" formControlName="orderId" placeholder="Order ID (e.g. TRK-01)" class="form-control"
+              [class.is-invalid]="trackForm.get('orderId')?.touched && trackForm.get('orderId')?.invalid" />
+          </div>
+
+          <div class="form-group">
+            <input type="text" formControlName="phone" placeholder="Phone Number (10 digits)" class="form-control"
+              [class.is-invalid]="trackForm.get('phone')?.touched && trackForm.get('phone')?.invalid" />
+          </div>
+
+          <div class="form-group">
+            <input type="date" formControlName="date" class="form-control"
+              [class.is-invalid]="trackForm.get('date')?.touched && trackForm.get('date')?.invalid" />
+          </div>
+
+          <button type="submit" class="btn-track" [disabled]="isLoading">
+            Track Package
+          </button>
+        </form>
+
+        @if (isLoading) {
+        <div class="loading-state">
+          Searching shipment...
+        </div>
+        }
+
+        @if (trackingError) {
+        <div class="error-state">
+          {{ trackingError }}
+        </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (trackingResult) {
+  <div class="lower-content">
+    <div class="result-state">
+      <div class="result-header">
+        <span class="status-badge" [attr.data-status]="trackingResult.status">
+          {{ trackingResult.status }}
+        </span>
+        <span class="order-id">{{ trackingResult.orderId }}</span>
+      </div>
+
+      <div class="route-info">
+        <div class="route-point">
+          <span class="point-label">From:</span> {{ trackingResult.pickupAddress }}
+        </div>
+        <div class="route-point">
+          <span class="point-label">To:</span> {{ trackingResult.dropAddress }}
+        </div>
+      </div>
+
+      <div class="timeline">
+        @for (step of trackingResult.timeline; track step.status) {
+        <div class="timeline-step" [class.completed]="step.isCompleted">
+          <div class="step-marker"></div>
+          <div class="step-content">
+            <h4 class="step-title">{{ step.status }}</h4>
+            <p class="step-desc">{{ step.description }}</p>
+            @if (step.timestamp) {
+            <span class="step-time">
+              {{ step.timestamp | date:'medium' }}
+            </span>
+            }
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+  </div>
+  }
+</div>

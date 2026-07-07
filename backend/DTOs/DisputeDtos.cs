@@ -50,3 +50,15 @@ public record ResolveDisputeResponse
     public DisputeStatus Status { get; init; }
     public DateTime ResolvedAt { get; init; }
 }
+
+public record DisputeResponse
+{
+    public Guid Id { get; init; }
+    public Guid ShipmentId { get; init; }
+    public string OrderId { get; init; } = string.Empty;
+    public string ComplaintText { get; init; } = string.Empty;
+    public DisputeStatus Status { get; init; }
+    public string? ResolutionNotes { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime? ResolvedAt { get; init; }
+}

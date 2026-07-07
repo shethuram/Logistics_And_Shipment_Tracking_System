@@ -59,7 +59,6 @@ public record CreateShipmentResponse
     public string OrderId { get; init; } = string.Empty;
     public ShipmentStatus Status { get; init; }
     public string? PaymentUrl { get; init; }
-    public string? SenderOtp { get; init; }
 }
 
 public record ShipmentDriverDto
@@ -102,6 +101,15 @@ public record ShipmentResponse
     public DateTime? StatusUpdatedAt { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
+
+    public decimal DeliveryCharge { get; init; }
+    public decimal PlatformFee { get; init; }
+    public decimal Cgst { get; init; }
+    public decimal Sgst { get; init; }
+    public decimal TotalAmount { get; init; }
+    public decimal DriverEarnings { get; init; }
+    public string PaymentMethod { get; init; } = string.Empty;
+    public string PaymentStatus { get; init; } = string.Empty;
 }
 
 public record UpdateShipmentRequest
@@ -131,6 +139,7 @@ public record AvailableShipmentDto
     public string ReceiverPhone { get; init; } = string.Empty;
     public double DistanceToPickupKm { get; init; }
     public string? DriverInstruction { get; init; }
+    public decimal DriverEarnings { get; init; }
 }
 
 public record ClaimShipmentResponse
@@ -221,6 +230,14 @@ public record PublicTrackingResponse
     public PublicTrackingDriverDto? Driver { get; init; }
     public DriverLocationDto? DriverLocation { get; init; }
     public List<TimelineEntryDto> Timeline { get; init; } = new();
+
+    public decimal DeliveryCharge { get; init; }
+    public decimal PlatformFee { get; init; }
+    public decimal Cgst { get; init; }
+    public decimal Sgst { get; init; }
+    public decimal TotalAmount { get; init; }
+    public string PaymentMethod { get; init; } = string.Empty;
+    public string PaymentStatus { get; init; } = string.Empty;
 }
 
 public record PublicTrackingDriverDto
@@ -243,4 +260,38 @@ public record TimelineEntryDto
     public string Description { get; init; } = string.Empty;
     public DateTime? Timestamp { get; init; }
     public bool IsCompleted { get; init; }
+}
+
+public record PriceEstimationRequest
+{
+    [Required]
+    [Range(-90.0, 90.0)]
+    public decimal PickupLat { get; init; }
+
+    [Required]
+    [Range(-180.0, 180.0)]
+    public decimal PickupLng { get; init; }
+
+    [Required]
+    [Range(-90.0, 90.0)]
+    public decimal DropLat { get; init; }
+
+    [Required]
+    [Range(-180.0, 180.0)]
+    public decimal DropLng { get; init; }
+
+    [Required]
+    public PackageType PackageType { get; init; }
+
+    [Required]
+    [Range(0.01, 10000.0)]
+    public decimal WeightKg { get; init; }
+}
+
+public record PriceEstimationResponse
+{
+    public decimal DeliveryCharge { get; init; }
+    public decimal Cgst { get; init; }
+    public decimal Sgst { get; init; }
+    public decimal TotalAmount { get; init; }
 }

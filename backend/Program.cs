@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 
 using Logistics.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +33,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSignalR();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngular", policy =>
+    {
+        policy.WithOrigins("http://localhost:4200")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 
 builder.Services.AddAuthentication(options =>
 {
@@ -58,6 +69,7 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddScoped<IAuthorizationHandler, ShipmentAccessHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, NotificationAccessHandler>();
+builder.Services.AddScoped<IClaimsTransformation, ClaimsTransformation>();
 
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
@@ -88,6 +100,7 @@ builder.Services.AddScoped<IShipmentRepository, ShipmentRepository>();
 builder.Services.AddScoped<ITrackingRepository, TrackingRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IDisputeRepository, DisputeRepository>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAdminDriverService, AdminDriverService>();
@@ -98,6 +111,7 @@ builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IShipmentService, ShipmentService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<ITrackingService, TrackingService>();
 builder.Services.AddScoped<ILlmService, LlmService>();
 builder.Services.AddScoped<IDisputeService, DisputeService>();
@@ -117,6 +131,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors("AllowAngular");
 app.UseIpRateLimiting();
 app.UseAuthentication();
 app.UseAuthorization();

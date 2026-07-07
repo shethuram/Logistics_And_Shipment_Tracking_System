@@ -105,4 +105,25 @@ public class DisputeService : IDisputeService
 
         return dispute.ToResolveDisputeResponse();
     }
+
+    public async Task<IEnumerable<DisputeResponse>> GetMyDisputesAsync(Guid customerId)
+    {
+        var disputes = await _db.Disputes
+            .Include(d => d.Shipment)
+            .Where(d => d.RaisedBy == customerId)
+            .OrderByDescending(d => d.CreatedAt)
+            .ToListAsync();
+
+        return disputes.Select(d => new DisputeResponse
+        {
+            Id = d.Id,
+            ShipmentId = d.ShipmentId,
+            OrderId = d.Shipment.OrderId,
+            ComplaintText = d.ComplaintText,
+            Status = d.Status,
+            ResolutionNotes = d.ResolutionNotes,
+            CreatedAt = d.CreatedAt,
+            ResolvedAt = d.ResolvedAt
+        });
+    }
 }

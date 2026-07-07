@@ -32,8 +32,8 @@ public class AppDbContext : DbContext
             e.Property(x => x.Phone).IsRequired();
             e.Property(x => x.Role).IsRequired();
 
-            e.HasIndex(x => x.Email);
-            e.HasIndex(x => x.Phone);
+            e.HasIndex(x => x.Email).IsUnique();
+            e.HasIndex(x => x.Phone).IsUnique();
             e.HasIndex(x => x.Auth0Id).IsUnique();
         });
 

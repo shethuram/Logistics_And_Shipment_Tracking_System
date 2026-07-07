@@ -1,0 +1,72 @@
+<div class="jobs-container">
+  <div class="main-jobs">
+    
+    <div class="header-row">
+      <h1 class="header-title">Available Shipments</h1>
+    </div>
+
+    @if (errorMessage()) {
+      <div class="alert-box">
+        {{ errorMessage() }}
+      </div>
+    }
+
+    <div class="jobs-list">
+      @if (activeShipment()) {
+        <div class="content-placeholder">
+          <p>You have an in-progress active delivery. Complete or release it first before claiming another job.</p>
+          <button class="btn-matte" (click)="goToActive()">View Active Delivery</button>
+        </div>
+      } @else if (!hasActiveVehicle()) {
+        <div class="content-placeholder">
+          <p>Please register and activate a vehicle to see matching delivery jobs.</p>
+          <button class="btn-matte" (click)="goToVehicles()">Manage Vehicles</button>
+        </div>
+      } @else if (!isOnline()) {
+        <div class="content-placeholder">
+          <p>You are currently offline. Turn on your status under "My Vehicles" to discover delivery jobs matching your vehicle.</p>
+          <button class="btn-matte" (click)="goToVehicles()">Go Online / Manage Vehicles</button>
+        </div>
+      } @else {
+        @if (availableJobs().length === 0) {
+          <div class="content-placeholder">
+            <p>Searching for nearby shipments... New jobs will automatically pop up here in real-time.</p>
+          </div>
+        } @else {
+          @for (job of availableJobs(); track job.id) {
+            <div class="job-card">
+              <div class="job-header">
+                <span class="order-id">{{ job.orderId }}</span>
+                <span class="earnings-payout">₹{{ job.driverEarnings | number:'1.2-2' }}</span>
+              </div>
+              
+              <div class="job-route">
+                <div class="route-stop pickup">
+                  <span class="stop-label">Pickup</span>
+                  <span class="stop-address">{{ job.pickupAddress }}</span>
+                </div>
+                <div class="route-stop drop">
+                  <span class="stop-label">Dropoff</span>
+                  <span class="stop-address">{{ job.dropAddress }}</span>
+                </div>
+              </div>
+
+              <div class="job-meta">
+                <span>Weight: {{ job.weightKg }} kg</span>
+                <span>Type: {{ job.packageType }}</span>
+                @if (job.distanceToPickupKm > 0) {
+                  <span>Distance to Pickup: {{ job.distanceToPickupKm | number:'1.1-1' }} km</span>
+                }
+              </div>
+
+              <button class="btn-matte" [disabled]="isLoading()" (click)="claimJob(job.id)">
+                Claim Delivery
+              </button>
+            </div>
+          }
+        }
+      }
+    </div>
+
+  </div>
+</div>

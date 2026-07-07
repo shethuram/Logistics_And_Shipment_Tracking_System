@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Logistics.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260604085408_InitialCreate")]
+    [Migration("20260701085013_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -533,9 +533,11 @@ namespace Logistics.Api.Migrations
                         .HasDatabaseName("ix_users_auth0id");
 
                     b.HasIndex("Email")
+                        .IsUnique()
                         .HasDatabaseName("ix_users_email");
 
                     b.HasIndex("Phone")
+                        .IsUnique()
                         .HasDatabaseName("ix_users_phone");
 
                     b.ToTable("users", (string)null);

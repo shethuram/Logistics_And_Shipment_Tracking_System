@@ -1,0 +1,34 @@
+<div class="status-container">
+  @if (session.profile()?.driver; as driver) {
+    <div class="status-box">
+      @if (driver.approvalStatus === 'PENDING') {
+        <span class="label">DRIVER REGISTRATION</span>
+        <h2 class="title">Your application is under review</h2>
+        <p class="subtitle">We will notify you once an admin has reviewed your profile.</p>
+        <button class="btn-logout" (click)="session.logout()">Log Out</button>
+      }
+
+      @if (driver.approvalStatus === 'REJECTED') {
+        <span class="label label-error">APPLICATION REJECTED</span>
+        <h2 class="title">Your application was not approved</h2>
+        @if (driver.approvalReason) {
+          <p class="reason-text">Reason: {{ driver.approvalReason }}</p>
+        } @else {
+          <p class="subtitle">Please check your details and contact support.</p>
+        }
+        <button class="btn-logout" (click)="session.logout()">Log Out</button>
+      }
+
+      @if (driver.approvalStatus === 'SUSPENDED') {
+        <span class="label label-error">ACCOUNT SUSPENDED</span>
+        <h2 class="title">Your account has been suspended</h2>
+        @if (driver.approvalReason) {
+          <p class="reason-text">Reason: {{ driver.approvalReason }}</p>
+        } @else {
+          <p class="subtitle">Please contact the administration for more information.</p>
+        }
+        <button class="btn-logout" (click)="session.logout()">Log Out</button>
+      }
+    </div>
+  }
+</div>

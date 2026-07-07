@@ -1,0 +1,57 @@
+<div class="profile-container">
+  <div class="form-box">
+    <span class="label">ACCOUNT ONBOARDING</span>
+    <h2 class="title">Complete Your Profile</h2>
+    <p class="subtitle">Please provide your details below to finish setting up your account.</p>
+
+    <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="profile-form">
+      <div class="form-group">
+        <label class="input-label">Email Address</label>
+        <input type="text" [value]="email" readonly class="form-control readonly-input" />
+      </div>
+
+      <div class="form-group">
+        <label class="input-label">Full Name</label>
+        <input type="text" formControlName="fullName" placeholder="John Doe" class="form-control"
+          [class.is-invalid]="profileForm.get('fullName')?.touched && profileForm.get('fullName')?.invalid" />
+        @if (profileForm.get('fullName')?.touched && profileForm.get('fullName')?.errors?.['required']) {
+        <span class="error-text">Full name is required.</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="input-label">Phone Number</label>
+        <input type="text" formControlName="phone" placeholder="10-digit mobile number" class="form-control"
+          [class.is-invalid]="profileForm.get('phone')?.touched && profileForm.get('phone')?.invalid" />
+        @if (profileForm.get('phone')?.touched && profileForm.get('phone')?.invalid) {
+        <span class="error-text">Please enter a valid 10-digit phone number.</span>
+        }
+      </div>
+
+      @if (userType() === 'DRIVER') {
+      <div class="form-group">
+        <label class="input-label">Driver License Number</label>
+        <input type="text" formControlName="licenseNumber" placeholder="e.g. TN45 20150012345" class="form-control"
+          [class.is-invalid]="profileForm.get('licenseNumber')?.touched && profileForm.get('licenseNumber')?.invalid" />
+        @if (profileForm.get('licenseNumber')?.touched && profileForm.get('licenseNumber')?.invalid) {
+        <span class="error-text">Enter a valid license (Format: SSRR YYYYNNNNNNN, e.g. TN45 20150012345).</span>
+        }
+      </div>
+      }
+
+      @if (errorMessage()) {
+      <div class="alert-error">
+        {{ errorMessage() }}
+      </div>
+      }
+
+      <button type="submit" class="btn-submit" [disabled]="isLoading()">
+        @if (isLoading()) {
+        Saving...
+        } @else {
+        Complete Registration
+        }
+      </button>
+    </form>
+  </div>
+</div>

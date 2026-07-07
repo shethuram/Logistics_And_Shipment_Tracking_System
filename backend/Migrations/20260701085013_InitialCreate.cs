@@ -367,12 +367,14 @@ namespace Logistics.Api.Migrations
             migrationBuilder.CreateIndex(
                 name: "ix_users_email",
                 table: "users",
-                column: "email");
+                column: "email",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_users_phone",
                 table: "users",
-                column: "phone");
+                column: "phone",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_vehicles_driver_id",

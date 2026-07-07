@@ -26,6 +26,12 @@ public class AuthService : IAuthService
         if (await _userRepo.ExistsByAuth0IdAsync(request.Auth0Id))
             throw new ConflictException("A user with this Auth0 ID already exists.");
 
+        if (await _userRepo.ExistsByEmailAsync(request.Email))
+            throw new ConflictException("A user with this email already exists.");
+
+        if (await _userRepo.ExistsByPhoneAsync(request.Phone))
+            throw new ConflictException("A user with this phone number already exists.");
+
         var user = new User
         {
             Auth0Id = request.Auth0Id,
@@ -44,6 +50,12 @@ public class AuthService : IAuthService
     {
         if (await _userRepo.ExistsByAuth0IdAsync(request.Auth0Id))
             throw new ConflictException("A user with this Auth0 ID already exists.");
+
+        if (await _userRepo.ExistsByEmailAsync(request.Email))
+            throw new ConflictException("A user with this email already exists.");
+
+        if (await _userRepo.ExistsByPhoneAsync(request.Phone))
+            throw new ConflictException("A user with this phone number already exists.");
 
         var user = new User
         {
