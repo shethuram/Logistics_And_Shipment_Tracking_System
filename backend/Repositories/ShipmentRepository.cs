@@ -120,6 +120,7 @@ public class ShipmentRepository : IShipmentRepository
     public Task<Shipment?> GetActiveShipmentForDriverAsync(Guid driverId)
     {
         return _db.Shipments
+            .Include(s => s.Payment)
             .FirstOrDefaultAsync(s => s.DriverId == driverId &&
                 (s.Status == ShipmentStatus.ASSIGNED || s.Status == ShipmentStatus.IN_TRANSIT));
     }
@@ -134,6 +135,6 @@ public class ShipmentRepository : IShipmentRepository
                 .ThenInclude(d => d!.ActiveVehicle)
             .Include(s => s.TrackingPings)
             .Include(s => s.Payment)
-            .FirstOrDefaultAsync(s => s.OrderId == orderId && s.Customer.Phone == phone);
+            .FirstOrDefaultAsync(s => s.OrderId == orderId && (s.Customer.Phone == phone || s.ReceiverPhone == phone));
     }
 }

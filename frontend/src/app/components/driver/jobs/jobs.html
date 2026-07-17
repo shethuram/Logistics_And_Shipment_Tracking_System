@@ -59,6 +59,33 @@
                 }
               </div>
 
+              @if (job.preferredWindow || job.driverInstruction || job.riskFlag) {
+                <div class="job-instructions-summary" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                  @if (job.preferredWindow) {
+                    <div style="font-size: 12px;">
+                      <span class="inst-badge">📅 Time Window:</span>
+                      <span style="color: #F5F4F0; margin-left: 4px;">
+                        {{ job.preferredWindow === 'MORNING' ? 'Morning (8AM-12PM)' : job.preferredWindow === 'AFTERNOON' ? 'Afternoon (12PM-4PM)' : 'Evening (4PM-8PM)' }}
+                      </span>
+                    </div>
+                  }
+                  
+                  @if (job.driverInstruction) {
+                    <div class="info-note-box" style="background-color: rgba(232, 168, 69, 0.05); border-left: 3px solid #E8A845; padding: 8px 12px; border-radius: 2px; text-align: left;">
+                      <span style="font-size: 11px; font-weight: 700; color: #E8A845; text-transform: uppercase; display: block; margin-bottom: 2px;">💡 Driver Instruction (AI):</span>
+                      <p style="margin: 0; font-size: 12px; color: #D4D4D4; font-style: italic; line-height: 1.4;">"{{ job.driverInstruction }}"</p>
+                    </div>
+                  }
+
+                  @if (job.riskFlag) {
+                    <div class="risk-note-box" style="background-color: rgba(239, 68, 68, 0.05); border-left: 3px solid #EF4444; padding: 8px 12px; border-radius: 2px; text-align: left;">
+                      <span style="font-size: 11px; font-weight: 700; color: #EF4444; text-transform: uppercase; display: block; margin-bottom: 2px;">⚠️ Risk Flagged ({{ job.riskSeverity }} Severity):</span>
+                      <p style="margin: 0; font-size: 12px; color: #D4D4D4; line-height: 1.4;">{{ job.riskReason }}</p>
+                    </div>
+                  }
+                </div>
+              }
+
               <button class="btn-matte" [disabled]="isLoading()" (click)="claimJob(job.id)">
                 Claim Delivery
               </button>

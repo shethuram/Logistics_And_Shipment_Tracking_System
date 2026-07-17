@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Logistics.Api.Data;
 using Logistics.Api.DTOs;
 using Logistics.Api.Exceptions;
@@ -16,19 +17,22 @@ public class DisputeService : IDisputeService
     private readonly INotificationService _notificationService;
     private readonly ILlmService _llmService;
     private readonly AppDbContext _db;
+    private readonly ILogger<DisputeService> _logger;
 
     public DisputeService(
         IDisputeRepository disputeRepo,
         IShipmentRepository shipmentRepo,
         INotificationService notificationService,
         ILlmService llmService,
-        AppDbContext db)
+        AppDbContext db,
+        ILogger<DisputeService> logger)
     {
         _disputeRepo = disputeRepo;
         _shipmentRepo = shipmentRepo;
         _notificationService = notificationService;
         _llmService = llmService;
         _db = db;
+        _logger = logger;
     }
 
     public async Task<RaiseDisputeResponse> RaiseDisputeAsync(Shipment shipment, string complaintText, Guid customerId)
@@ -55,6 +59,7 @@ public class DisputeService : IDisputeService
         };
 
         await _disputeRepo.AddAsync(dispute);
+        _logger.LogInformation("Dispute {DisputeId} raised for Shipment {ShipmentId} ({OrderId}) by Customer {CustomerId}.", dispute.Id, shipment.Id, shipment.OrderId, customerId);
 
         await _notificationService.BroadcastAdminAlertAsync("NEW_DISPUTE", new { DisputeId = dispute.Id, OrderId = shipment.OrderId });
 
@@ -100,6 +105,7 @@ public class DisputeService : IDisputeService
         dispute.ResolvedAt = DateTime.UtcNow;
 
         await _disputeRepo.UpdateAsync(dispute);
+        _logger.LogInformation("Dispute {DisputeId} resolved as {Status} by Admin {AdminId}.", dispute.Id, request.Status, adminUserId);
 
         await _notificationService.CreateNotificationAsync(dispute.Shipment.CustomerId, dispute.ShipmentId, "Dispute Resolved", $"Your dispute for shipment {dispute.Shipment.OrderId} has been resolved.");
 

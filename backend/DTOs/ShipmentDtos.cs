@@ -140,6 +140,9 @@ public record AvailableShipmentDto
     public double DistanceToPickupKm { get; init; }
     public string? DriverInstruction { get; init; }
     public decimal DriverEarnings { get; init; }
+    public bool RiskFlag { get; init; }
+    public RiskSeverity RiskSeverity { get; init; }
+    public string? RiskReason { get; init; }
 }
 
 public record ClaimShipmentResponse

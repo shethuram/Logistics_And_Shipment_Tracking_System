@@ -39,6 +39,10 @@ export class DriverVehiclesComponent implements OnInit {
     this.loadVehicles();
   }
 
+  isBusy(): boolean {
+    return this.session.profile()?.driver?.operationalStatus === 'ON_DELIVERY';
+  }
+
   loadVehicles() {
     this.isLoading.set(true);
     this.driverApi.getVehicles().subscribe({
@@ -61,6 +65,7 @@ export class DriverVehiclesComponent implements OnInit {
       this.driverApi.goOffline().subscribe({
         next: () => {
           this.isOnline.set(false);
+          this.session.updateDriverStatus('OFFLINE');
           this.isLoading.set(false);
         },
         error: (err) => {
@@ -74,6 +79,7 @@ export class DriverVehiclesComponent implements OnInit {
           this.driverApi.goOnline(pos.coords.latitude, pos.coords.longitude).subscribe({
             next: () => {
               this.isOnline.set(true);
+              this.session.updateDriverStatus('ONLINE');
               this.isLoading.set(false);
             },
             error: (err) => {
@@ -86,6 +92,7 @@ export class DriverVehiclesComponent implements OnInit {
           this.driverApi.goOnline(12.9716, 77.5946).subscribe({
             next: () => {
               this.isOnline.set(true);
+              this.session.updateDriverStatus('ONLINE');
               this.isLoading.set(false);
             },
             error: (err) => {
@@ -128,6 +135,7 @@ export class DriverVehiclesComponent implements OnInit {
         this.vehicles.update(list =>
           list.map(v => ({ ...v, isActive: v.id === id }))
         );
+        this.session.updateDriverActiveVehicle(id);
         this.isLoading.set(false);
       },
       error: (err) => {

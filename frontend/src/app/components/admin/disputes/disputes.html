@@ -1,0 +1,136 @@
+<div class="admin-disputes-container">
+  <div class="dashboard-header-row">
+    <h1 class="dashboard-header-title">Customer Disputes Registry</h1>
+    <span class="count-badge">{{ totalCount() }} Total</span>
+  </div>
+
+  <div class="filter-pills-row">
+    <button 
+      class="btn-pill" 
+      [class.active]="selectedStatus() === undefined" 
+      (click)="filterByStatus(undefined)">
+      All Disputes
+    </button>
+    <button 
+      class="btn-pill" 
+      [class.active]="selectedStatus() === 'OPEN'" 
+      (click)="filterByStatus('OPEN')">
+      Open
+    </button>
+    <button 
+      class="btn-pill" 
+      [class.active]="selectedStatus() === 'RESOLVED'" 
+      (click)="filterByStatus('RESOLVED')">
+      Resolved
+    </button>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="alert-box error">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (isLoading() && disputes().length === 0) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading disputes registry...</p>
+    </div>
+  } @else {
+    @if (disputes().length === 0) {
+      <div class="empty-state">
+        <p>No customer disputes match the selected status.</p>
+      </div>
+    } @else {
+      <div class="disputes-list">
+        @for (dispute of disputes(); track dispute.id) {
+          <div class="dispute-card" [attr.data-status]="dispute.status">
+            <div class="dispute-card-header">
+              <div class="dispute-order-info">
+                <span class="order-id">Order ID: {{ dispute.orderId }}</span>
+                <span class="dispute-date">Raised: {{ dispute.createdAt | date:'mediumDate' }}</span>
+              </div>
+              <span class="status-badge" [attr.data-status]="dispute.status">{{ dispute.status }}</span>
+            </div>
+
+            <div class="dispute-card-body">
+              <div class="complaint-section">
+                <span class="section-label">Customer Complaint Note:</span>
+                <p class="complaint-text">"{{ dispute.complaintText }}"</p>
+              </div>
+
+              @if (dispute.status === 'RESOLVED') {
+                <div class="resolution-section">
+                  <span class="section-label">Resolution Summary:</span>
+                  <p class="resolution-text">"{{ dispute.resolutionNotes }}"</p>
+                  <span class="resolution-meta">Resolved on {{ dispute.resolvedAt | date:'mediumDate' }}</span>
+                </div>
+              }
+            </div>
+
+            @if (dispute.status === 'OPEN') {
+              <div class="dispute-card-actions">
+                <button 
+                  class="btn-resolve" 
+                  [disabled]="isLoading()" 
+                  (click)="openResolveModal(dispute.id)">
+                  Resolve Dispute
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      @if (totalCount() > pageSize) {
+        <div class="pagination-row">
+          <button class="btn-page" [disabled]="currentPage() === 1 || isLoading()" (click)="prevPage()">Previous</button>
+          <span class="page-indicator">Page {{ currentPage() }}</span>
+          <button class="btn-page" [disabled]="currentPage() * pageSize >= totalCount() || isLoading()" (click)="nextPage()">Next</button>
+        </div>
+      }
+    }
+  }
+</div>
+
+@if (showResolveModal()) {
+  <div class="modal-backdrop" (click)="closeResolveModal()"></div>
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Resolve Customer Dispute</h3>
+      <button class="btn-close" (click)="closeResolveModal()">×</button>
+    </div>
+    
+    <form [formGroup]="resolveForm" (ngSubmit)="submitResolution()">
+      <div class="modal-body">
+        <p class="modal-intro">Please describe the actions taken to address this complaint. This response will be visible to the customer immediately.</p>
+        
+        @if (resolveError()) {
+          <div class="alert-box error" style="margin-bottom: 12px;">
+            {{ resolveError() }}
+          </div>
+        }
+
+        <div class="form-group">
+          <label class="form-label">Resolution Details</label>
+          <textarea 
+            formControlName="resolutionText"
+            class="form-textarea" 
+            rows="4" 
+            placeholder="e.g. Spoke with the assigned driver. Driver has completed the cash collection. Verified payment successful. Marking shipment closed.">
+          </textarea>
+          @if (resolveForm.get('resolutionText')?.touched && resolveForm.get('resolutionText')?.errors) {
+            <span class="validation-msg">Resolution details must be at least 5 characters long.</span>
+          }
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" (click)="closeResolveModal()">Cancel</button>
+        <button type="submit" class="btn-submit-resolve" [disabled]="resolveForm.invalid || isSubmitting()">
+          Resolve Dispute
+        </button>
+      </div>
+    </form>
+  </div>
+}

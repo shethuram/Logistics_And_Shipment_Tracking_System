@@ -45,47 +45,47 @@
               [class.is-invalid]="trackForm.get('date')?.touched && trackForm.get('date')?.invalid" />
           </div>
 
-          <button type="submit" class="btn-track" [disabled]="isLoading">
+          <button type="submit" class="btn-track" [disabled]="isLoading()">
             Track Package
           </button>
         </form>
 
-        @if (isLoading) {
+        @if (isLoading()) {
         <div class="loading-state">
           Searching shipment...
         </div>
         }
 
-        @if (trackingError) {
+        @if (trackingError()) {
         <div class="error-state">
-          {{ trackingError }}
+          {{ trackingError() }}
         </div>
         }
       </div>
     </div>
   </div>
 
-  @if (trackingResult) {
+  @if (trackingResult(); as result) {
   <div class="lower-content">
     <div class="result-state">
       <div class="result-header">
-        <span class="status-badge" [attr.data-status]="trackingResult.status">
-          {{ trackingResult.status }}
+        <span class="status-badge" [attr.data-status]="result.status">
+          {{ result.status }}
         </span>
-        <span class="order-id">{{ trackingResult.orderId }}</span>
+        <span class="order-id">{{ result.orderId }}</span>
       </div>
 
       <div class="route-info">
         <div class="route-point">
-          <span class="point-label">From:</span> {{ trackingResult.pickupAddress }}
+          <span class="point-label">From:</span> {{ result.pickupAddress }}
         </div>
         <div class="route-point">
-          <span class="point-label">To:</span> {{ trackingResult.dropAddress }}
+          <span class="point-label">To:</span> {{ result.dropAddress }}
         </div>
       </div>
 
       <div class="timeline">
-        @for (step of trackingResult.timeline; track step.status) {
+        @for (step of result.timeline; track step.status) {
         <div class="timeline-step" [class.completed]="step.isCompleted">
           <div class="step-marker"></div>
           <div class="step-content">

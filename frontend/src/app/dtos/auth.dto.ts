@@ -1,4 +1,4 @@
-import { DriverApprovalStatus } from '../models/enums';
+import { DriverApprovalStatus, OperationalStatus } from '../models/enums';
 
 export interface CustomerRegistrationDto {
   auth0Id: string;
@@ -18,7 +18,7 @@ export interface DriverRegistrationDto {
 export interface DriverDetailsDto {
   approvalStatus: DriverApprovalStatus;
   approvalReason: string | null;
-  operationalStatus?: 'ONLINE' | 'OFFLINE';
+  operationalStatus?: OperationalStatus;
   activeVehicleId?: string | null;
 }
 

@@ -39,4 +39,17 @@ public static class DriverMappings
     {
         OperationalStatus = driver.OperationalStatus
     };
+
+    public static AdminDriverDto ToAdminDriverDto(this Driver driver) => new()
+    {
+        Id = driver.Id,
+        FullName = driver.User?.FullName ?? string.Empty,
+        Phone = driver.User?.Phone ?? string.Empty,
+        LicenseNumber = driver.LicenseNumber,
+        ApprovalStatus = driver.ApprovalStatus,
+        OperationalStatus = driver.OperationalStatus,
+        Vehicles = driver.Vehicles?.Select(v => v.ToPendingDriverVehicleDto()).ToList() ?? new List<PendingDriverVehicleDto>(),
+        CancelCount = driver.CancelCount,
+        CreatedAt = driver.CreatedAt
+    };
 }

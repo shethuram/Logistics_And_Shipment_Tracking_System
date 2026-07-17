@@ -70,7 +70,10 @@ public static class ShipmentMappings
         ReceiverPhone = s.ReceiverPhone,
         DistanceToPickupKm = distanceToPickupKm,
         DriverInstruction = s.DriverInstruction,
-        DriverEarnings = s.Payment != null ? s.Payment.DriverEarnings : 0m
+        DriverEarnings = s.Payment != null ? s.Payment.DriverEarnings : 0m,
+        RiskFlag = s.RiskFlag,
+        RiskSeverity = s.RiskSeverity,
+        RiskReason = s.RiskReason
     };
 
     public static ClaimShipmentResponse ToClaimShipmentResponse(this Shipment s) => new()

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '@auth0/auth0-angular';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -25,9 +25,9 @@ export class LandingPageComponent {
     date: ['', Validators.required]
   });
 
-  trackingResult: PublicTrackingResponseDto | null = null;
-  trackingError: string | null = null;
-  isLoading = false;
+  trackingResult = signal<PublicTrackingResponseDto | null>(null);
+  trackingError = signal<string | null>(null);
+  isLoading = signal<boolean>(false);
 
   becomeCustomer() {
     this.auth.loginWithRedirect({
@@ -73,20 +73,20 @@ export class LandingPageComponent {
       return;
     }
 
-    this.isLoading = true;
-    this.trackingResult = null;
-    this.trackingError = null;
+    this.isLoading.set(true);
+    this.trackingResult.set(null);
+    this.trackingError.set(null);
 
     const { orderId, phone, date } = this.trackForm.getRawValue();
 
     this.trackingService.trackShipment(orderId, phone, date).subscribe({
       next: (res) => {
-        this.trackingResult = res;
-        this.isLoading = false;
+        this.trackingResult.set(res);
+        this.isLoading.set(false);
       },
       error: () => {
-        this.trackingError = 'No shipment found. Please check your details.';
-        this.isLoading = false;
+        this.trackingError.set('No shipment found. Please check your details.');
+        this.isLoading.set(false);
       }
     });
   }

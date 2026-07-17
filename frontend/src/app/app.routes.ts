@@ -8,6 +8,9 @@ import { DriverActiveComponent } from './components/driver/active/active';
 import { DriverVehiclesComponent } from './components/driver/vehicles/vehicles';
 import { DriverStatusComponent } from './components/driver/status/status';
 import { AdminDashboardComponent } from './components/admin/dashboard/dashboard';
+import { AdminDriversComponent } from './components/admin/drivers/drivers';
+import { AdminDisputesComponent } from './components/admin/disputes/disputes';
+import { AdminShipmentsComponent } from './components/admin/shipments/shipments';
 import { BookShipmentComponent } from './components/customer/book-shipment/book-shipment';
 import { CustomerShipmentDetailsComponent } from './components/customer/shipment-details/shipment-details';
 import { CustomerDisputesComponent } from './components/customer/disputes/disputes';
@@ -25,5 +28,8 @@ export const routes: Routes = [
   { path: 'driver/active', component: DriverActiveComponent, canActivate: [driverGuard] },
   { path: 'driver/vehicles', component: DriverVehiclesComponent, canActivate: [driverGuard] },
   { path: 'driver/status', component: DriverStatusComponent, canActivate: [driverGuard] },
-  { path: 'admin/dashboard', component: AdminDashboardComponent, canActivate: [adminGuard] }
+  { path: 'admin/dashboard', component: AdminDashboardComponent, canActivate: [adminGuard] },
+  { path: 'admin/drivers', component: AdminDriversComponent, canActivate: [adminGuard] },
+  { path: 'admin/disputes', component: AdminDisputesComponent, canActivate: [adminGuard] },
+  { path: 'admin/shipments', component: AdminShipmentsComponent, canActivate: [adminGuard] }
 ];

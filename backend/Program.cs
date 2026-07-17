@@ -14,8 +14,14 @@ using Microsoft.EntityFrameworkCore;
 using Logistics.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext());
 
 #region Services
 builder.Services.AddControllers()
@@ -124,6 +130,7 @@ var app = builder.Build();
 
 #region Pipeline
 app.UseExceptionHandling();
+app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment())
 {

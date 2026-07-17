@@ -1,0 +1,247 @@
+<div class="admin-drivers-container">
+  <div class="dashboard-header-row">
+    <h1 class="dashboard-header-title">Driver Directory & Fleet Approvals</h1>
+    <span class="count-badge">{{ totalCount() }} Drivers</span>
+  </div>
+
+  <!-- Status Pills Row -->
+  <div class="filter-pills-row">
+    <button 
+      class="btn-pill" 
+      [class.active]="selectedStatus() === undefined" 
+      (click)="filterByStatus(undefined)">
+      All Fleet
+    </button>
+    <button 
+      class="btn-pill" 
+      [class.active]="selectedStatus() === 'PENDING'" 
+      (click)="filterByStatus('PENDING')">
+      ⏳ Pending
+    </button>
+    <button 
+      class="btn-pill" 
+      [class.active]="selectedStatus() === 'APPROVED'" 
+      (click)="filterByStatus('APPROVED')">
+      ✅ Approved
+    </button>
+    <button 
+      class="btn-pill" 
+      [class.active]="selectedStatus() === 'SUSPENDED'" 
+      (click)="filterByStatus('SUSPENDED')">
+      🚫 Suspended
+    </button>
+    <button 
+      class="btn-pill" 
+      [class.active]="selectedStatus() === 'REJECTED'" 
+      (click)="filterByStatus('REJECTED')">
+      ❌ Rejected
+    </button>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="alert-box error">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (isLoading() && drivers().length === 0) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading driver profiles...</p>
+    </div>
+  } @else {
+    @if (drivers().length === 0) {
+      <div class="empty-state">
+        <p>No driver profiles match the selected status.</p>
+      </div>
+    } @else {
+      <div class="drivers-list">
+        @for (driver of drivers(); track driver.id) {
+          <div class="driver-card" [attr.data-approval-status]="driver.approvalStatus">
+            <div class="driver-card-header">
+              <div class="driver-info-main">
+                <h3 class="driver-name">{{ driver.fullName }}</h3>
+                <span class="driver-phone">📞 {{ driver.phone }}</span>
+              </div>
+              <div class="driver-badges">
+                <span class="status-badge" [attr.data-status]="driver.approvalStatus">{{ driver.approvalStatus }}</span>
+                @if (driver.approvalStatus === 'APPROVED') {
+                  <span class="op-badge" [attr.data-op-status]="driver.operationalStatus">{{ driver.operationalStatus }}</span>
+                }
+              </div>
+            </div>
+
+            <div class="driver-card-body">
+              <div class="details-section">
+                <span class="detail-label">License Number</span>
+                <span class="detail-value license">{{ driver.licenseNumber }}</span>
+              </div>
+              <div class="details-section">
+                <span class="detail-label">Cancellation Count</span>
+                <span class="detail-value" [class.warning]="driver.cancelCount >= 3">{{ driver.cancelCount }}</span>
+              </div>
+            </div>
+
+            <div class="driver-card-actions">
+              <button 
+                class="btn-view-profile" 
+                (click)="viewDriverDetail(driver.id)">
+                View Profile Details
+              </button>
+
+              @if (driver.approvalStatus === 'PENDING') {
+                <button 
+                  class="btn-approve" 
+                  [disabled]="isLoading()" 
+                  (click)="approveDriver(driver.id)">
+                  Approve
+                </button>
+                <button 
+                  class="btn-reject" 
+                  [disabled]="isLoading()" 
+                  (click)="openActionModal(driver.id, 'REJECT')">
+                  Reject
+                </button>
+              }
+
+              @if (driver.approvalStatus === 'APPROVED') {
+                <button 
+                  class="btn-reject" 
+                  [disabled]="isLoading()" 
+                  (click)="openActionModal(driver.id, 'SUSPEND')">
+                  Suspend
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      @if (totalCount() > pageSize) {
+        <div class="pagination-row">
+          <button class="btn-page" [disabled]="currentPage() === 1 || isLoading()" (click)="prevPage()">Previous</button>
+          <span class="page-indicator">Page {{ currentPage() }} (Total: {{ totalCount() }} drivers)</span>
+          <button class="btn-page" [disabled]="currentPage() * pageSize >= totalCount() || isLoading()" (click)="nextPage()">Next</button>
+        </div>
+      }
+    }
+  }
+</div>
+
+<!-- Rejection / Suspension Action Modal -->
+@if (showActionModal()) {
+  <div class="modal-backdrop" (click)="closeActionModal()"></div>
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>{{ actionType() === 'REJECT' ? 'Reject Driver Application' : 'Suspend Driver Profile' }}</h3>
+      <button class="btn-close" (click)="closeActionModal()">×</button>
+    </div>
+    
+    <form [formGroup]="actionForm" (ngSubmit)="submitAction()">
+      <div class="modal-body">
+        <p class="modal-intro">
+          Please enter the reason details. This comment will be logged on the driver's dashboard.
+        </p>
+        
+        @if (actionError()) {
+          <div class="alert-box error" style="margin-bottom: 12px;">
+            {{ actionError() }}
+          </div>
+        }
+
+        <div class="form-group">
+          <label class="form-label">Reason Notes</label>
+          <textarea 
+            formControlName="reason"
+            class="form-textarea" 
+            rows="4" 
+            placeholder="e.g. Driver license document is expired/blurred. Please re-upload.">
+          </textarea>
+          @if (actionForm.get('reason')?.touched && actionForm.get('reason')?.errors) {
+            <span class="validation-msg">Reason details must be at least 5 characters long.</span>
+          }
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" (click)="closeActionModal()">Cancel</button>
+        <button type="submit" class="btn-submit-reject" [disabled]="actionForm.invalid || isSubmitting()">
+          Confirm
+        </button>
+      </div>
+    </form>
+  </div>
+}
+
+<!-- Detailed Driver Profile Modal (Slide drawer details) -->
+@if (showDetailModal() && selectedDriverDetail(); as detail) {
+  <div class="modal-backdrop" (click)="closeDetailModal()"></div>
+  <div class="modal-dialog detail-drawer-modal">
+    <div class="modal-header">
+      <h3>Complete Driver Profile</h3>
+      <button class="btn-close" (click)="closeDetailModal()">×</button>
+    </div>
+    
+    <div class="modal-body profile-details-body">
+      <!-- Profile Header Summary -->
+      <div class="profile-header-card">
+        <div class="avatar-circle">🚚</div>
+        <div class="profile-name-info">
+          <h2 class="profile-fullname">{{ detail.fullName }}</h2>
+          <span class="profile-phone">📞 {{ detail.phone }}</span>
+        </div>
+      </div>
+
+      <!-- Extended Details grid -->
+      <div class="profile-grid">
+        <div class="profile-item">
+          <span class="p-lbl">Registration Date</span>
+          <span class="p-val">{{ detail.createdAt | date:'mediumDate' }}</span>
+        </div>
+        <div class="profile-item">
+          <span class="p-lbl">License Document Number</span>
+          <span class="p-val license-no">{{ detail.licenseNumber }}</span>
+        </div>
+        <div class="profile-item">
+          <span class="p-lbl">Approval Status</span>
+          <span class="p-val badge-status-text" [attr.data-status]="detail.approvalStatus">
+            {{ detail.approvalStatus }}
+          </span>
+        </div>
+        <div class="profile-item">
+          <span class="p-lbl">Cancellation History</span>
+          <span class="p-val" [class.warning]="detail.cancelCount >= 3">
+            {{ detail.cancelCount }} times canceled
+          </span>
+        </div>
+      </div>
+
+      <!-- Fleet Vehicles Sub-panel -->
+      <div class="vehicles-panel-section">
+        <h4 class="section-sub-title">Registered Fleet Vehicles</h4>
+        @if (detail.vehicles && detail.vehicles.length > 0) {
+          <div class="vehicles-table">
+            <div class="v-table-header">
+              <span>Vehicle Type</span>
+              <span>Plate Number</span>
+            </div>
+            @for (v of detail.vehicles; track v.vehicleNumber) {
+              <div class="v-table-row">
+                <span class="v-type-cell">{{ v.vehicleType }}</span>
+                <span class="v-number-cell">{{ v.vehicleNumber }}</span>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="empty-vehicles-banner">
+            <span>No vehicles registered to this profile yet.</span>
+          </div>
+        }
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" (click)="closeDetailModal()">Close Profile</button>
+    </div>
+  </div>
+}

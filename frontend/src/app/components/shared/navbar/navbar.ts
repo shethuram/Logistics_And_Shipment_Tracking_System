@@ -1,7 +1,7 @@
-import { Component, inject, ChangeDetectionStrategy, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy, signal, OnInit, OnDestroy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { SessionService } from '../../../services/session.service';
 import { NotificationApiService } from '../../../services/notification.service';
 import { SignalrService } from '../../../services/signalr.service';
@@ -26,7 +26,17 @@ export class NavbarComponent implements OnInit, OnDestroy {
   public unreadCount = signal<number>(0);
   public showDropdown = signal(false);
 
-  private destroySubscription = new Subscription();
+  notificationReceived = toSignal(this.signalrService.notificationReceived$);
+
+  constructor() {
+    effect(() => {
+      const notif = this.notificationReceived();
+      if (notif) {
+        this.notifications.update(list => [notif, ...list.slice(0, 4)]);
+        this.unreadCount.update(c => c + 1);
+      }
+    });
+  }
 
   ngOnInit() {
     this.session.resolveSession().subscribe(profile => {
@@ -53,13 +63,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.signalrService.startConnection().then(() => {
       this.signalrService.joinUserGroup(userId);
     });
-
-    this.destroySubscription.add(
-      this.signalrService.notificationReceived$.subscribe(notif => {
-        this.notifications.update(list => [notif, ...list.slice(0, 4)]);
-        this.unreadCount.update(c => c + 1);
-      })
-    );
   }
 
   toggleMobileMenu() {
@@ -104,7 +107,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.destroySubscription.unsubscribe();
     const profile = this.session.profile();
     if (profile && profile.userId) {
       this.signalrService.leaveUserGroup(profile.userId);

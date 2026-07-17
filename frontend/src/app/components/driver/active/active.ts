@@ -28,6 +28,9 @@ export class DriverActiveComponent implements OnInit, OnDestroy {
   otpCode = signal<string>('');
   failureReason = signal<string>('');
 
+  lastSimulatedLat: number | null = null;
+  lastSimulatedLng: number | null = null;
+
   private trackingInterval: any;
   private simStep = 0;
   private simMax = 10;
@@ -131,14 +134,10 @@ export class DriverActiveComponent implements OnInit, OnDestroy {
     this.errorMessage.set(null);
     this.isLoading.set(true);
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        this.verifyDeliveryWithCoords(job.id, pos.coords.latitude, pos.coords.longitude);
-      },
-      (err) => {
-        this.verifyDeliveryWithCoords(job.id, job.dropLat, job.dropLng);
-      }
-    );
+    const lat = this.lastSimulatedLat !== null ? this.lastSimulatedLat : job.dropLat;
+    const lng = this.lastSimulatedLng !== null ? this.lastSimulatedLng : job.dropLng;
+
+    this.verifyDeliveryWithCoords(job.id, lat, lng);
   }
 
   private verifyDeliveryWithCoords(id: string, lat: number, lng: number) {
@@ -185,8 +184,12 @@ export class DriverActiveComponent implements OnInit, OnDestroy {
 
       this.simStep++;
       const ratio = this.simStep / this.simMax;
+
       const currentLat = shipment.pickupLat + (shipment.dropLat - shipment.pickupLat) * ratio;
       const currentLng = shipment.pickupLng + (shipment.dropLng - shipment.pickupLng) * ratio;
+
+      this.lastSimulatedLat = currentLat;
+      this.lastSimulatedLng = currentLng;
 
       this.trackingApi.recordLocation({
         shipmentId: shipment.id,

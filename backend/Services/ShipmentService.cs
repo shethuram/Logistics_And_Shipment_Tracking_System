@@ -123,6 +123,7 @@ public class ShipmentService : IShipmentService
                 shipment.OrderId = $"TRK-{todayStr}-{sequence:D5}";
 
                 await _shipmentRepo.AddAsync(shipment);
+                _logger.LogInformation("Shipment {ShipmentId} ({OrderId}) created by Customer {CustomerId} with value {Amount}.", shipment.Id, shipment.OrderId, customerId, totalAmount);
                 break;
             }
             catch (DbUpdateException) when (attempt < maxRetries)
@@ -338,6 +339,9 @@ public class ShipmentService : IShipmentService
             shipment.StatusChangedBy = driver.UserId;
             shipment.UpdatedAt = DateTime.UtcNow;
 
+            driver.OperationalStatus = OperationalStatus.ON_DELIVERY;
+            await _driverRepo.UpdateAsync(driver);
+
             var senderOtp = _otpService.GenerateOtp();
             var receiverOtp = _otpService.GenerateOtp();
 
@@ -351,6 +355,7 @@ public class ShipmentService : IShipmentService
 
             await _shipmentRepo.UpdateAsync(shipment);
             await transaction.CommitAsync();
+            _logger.LogInformation("Shipment {ShipmentId} ({OrderId}) claimed by Driver {DriverId}.", shipment.Id, shipment.OrderId, driver.Id);
 
             var customer = await _db.Users.FindAsync(shipment.CustomerId);
             var customerEmail = customer?.Email ?? "customer@example.com";
@@ -401,6 +406,7 @@ public class ShipmentService : IShipmentService
         try
         {
             driver.CancelCount++;
+            driver.OperationalStatus = OperationalStatus.ONLINE;
             await _driverRepo.UpdateAsync(driver);
 
             shipment.DriverId = null;
@@ -412,6 +418,7 @@ public class ShipmentService : IShipmentService
 
             await _shipmentRepo.UpdateAsync(shipment);
             await transaction.CommitAsync();
+            _logger.LogWarning("Driver {DriverId} cancelled claim for Shipment {ShipmentId} ({OrderId}). Reason: {Reason}, Current Cancel Count: {CancelCount}.", driver.Id, shipment.Id, shipment.OrderId, request.Reason, driver.CancelCount);
         }
         catch
         {
@@ -471,6 +478,7 @@ public class ShipmentService : IShipmentService
         shipment.UpdatedAt = DateTime.UtcNow;
 
         await _shipmentRepo.UpdateAsync(shipment);
+        _logger.LogInformation("Pickup confirmed for Shipment {ShipmentId} ({OrderId}) by Driver {DriverId}. Status set to IN_TRANSIT.", shipment.Id, shipment.OrderId, driver.Id);
 
         await _notificationService.CreateNotificationAsync(shipment.CustomerId, shipment.Id, "Package Picked Up", $"Your package for shipment {shipment.OrderId} has been picked up and is in transit.");
         await _notificationService.BroadcastShipmentUpdateAsync(shipment.Id, "IN_TRANSIT", new { shipment.OrderId });
@@ -523,7 +531,11 @@ public class ShipmentService : IShipmentService
         shipment.StatusUpdatedAt = DateTime.UtcNow;
         shipment.UpdatedAt = DateTime.UtcNow;
 
+        driver.OperationalStatus = OperationalStatus.ONLINE;
+        await _driverRepo.UpdateAsync(driver);
+
         await _shipmentRepo.UpdateAsync(shipment);
+        _logger.LogInformation("Delivery confirmed for Shipment {ShipmentId} ({OrderId}) by Driver {DriverId}. Status set to DELIVERED.", shipment.Id, shipment.OrderId, driver.Id);
 
         await _notificationService.CreateNotificationAsync(shipment.CustomerId, shipment.Id, "Package Delivered", $"Your package for shipment {shipment.OrderId} has been delivered successfully.");
         await _notificationService.BroadcastShipmentUpdateAsync(shipment.Id, "DELIVERED", new { shipment.OrderId });
@@ -541,9 +553,15 @@ public class ShipmentService : IShipmentService
             throw new BusinessRuleException("Cash can only be marked as collected after delivery is confirmed.");
 
         shipment.CashCollected = true;
+        if (shipment.Payment != null)
+        {
+            shipment.Payment.Status = PaymentStatus.SUCCESS;
+            shipment.Payment.UpdatedAt = DateTime.UtcNow;
+        }
         shipment.UpdatedAt = DateTime.UtcNow;
 
         await _shipmentRepo.UpdateAsync(shipment);
+        _logger.LogInformation("Cash collection confirmed for Shipment {ShipmentId} ({OrderId}) by Driver {DriverId}.", shipment.Id, shipment.OrderId, driver.Id);
 
         return shipment.ToCashCollectedResponse();
     }
@@ -562,7 +580,11 @@ public class ShipmentService : IShipmentService
         shipment.StatusUpdatedAt = DateTime.UtcNow;
         shipment.UpdatedAt = DateTime.UtcNow;
 
+        driver.OperationalStatus = OperationalStatus.ONLINE;
+        await _driverRepo.UpdateAsync(driver);
+
         await _shipmentRepo.UpdateAsync(shipment);
+        _logger.LogWarning("Pickup failed for Shipment {ShipmentId} ({OrderId}) by Driver {DriverId}. Reason: {Reason}", shipment.Id, shipment.OrderId, driver.Id, request.Reason);
 
         await _notificationService.CreateNotificationAsync(shipment.CustomerId, shipment.Id, "Pickup Failed", $"Pickup failed for shipment {shipment.OrderId}. Reason: {request.Reason}");
         await _notificationService.BroadcastShipmentUpdateAsync(shipment.Id, "PICKUP_FAILED", new { shipment.OrderId, Reason = request.Reason });
@@ -588,7 +610,11 @@ public class ShipmentService : IShipmentService
             throw new NotFoundException("Shipment not found.");
         }
 
-        if (parsedDate.Date != shipment.CreatedAt.Date)
+        var timeZoneId = OperatingSystem.IsWindows() ? "India Standard Time" : "Asia/Kolkata";
+        var istZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+        var localCreatedAt = TimeZoneInfo.ConvertTimeFromUtc(shipment.CreatedAt, istZone);
+
+        if (parsedDate.Date != localCreatedAt.Date)
         {
             throw new NotFoundException("Shipment not found.");
         }

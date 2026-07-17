@@ -81,6 +81,9 @@ export interface AvailableShipmentDto {
   distanceToPickupKm: number;
   driverInstruction?: string;
   driverEarnings: number;
+  riskFlag: boolean;
+  riskSeverity: 'HIGH' | 'LOW' | 'NONE';
+  riskReason?: string;
 }
 
 export interface PriceEstimationRequest {
