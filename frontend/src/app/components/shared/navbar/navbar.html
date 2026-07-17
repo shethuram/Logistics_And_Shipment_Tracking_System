@@ -19,9 +19,19 @@
         }
 
         @if (session.role() === 'ADMIN') {
-          <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-link">Admin Dashboard</a>
+          <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-link">Dashboard</a>
+          <a routerLink="/admin/drivers" routerLinkActive="active" class="nav-link">Driver Approvals</a>
+          <a routerLink="/admin/disputes" routerLinkActive="active" class="nav-link">Disputes</a>
+          <a routerLink="/admin/shipments" routerLinkActive="active" class="nav-link">All Shipments</a>
         }
       </div>
+
+      @if (session.role() === 'DRIVER' && session.profile()?.driver) {
+        <div class="driver-header-status" [attr.data-status]="session.profile()?.driver?.operationalStatus">
+          <span class="status-indicator-dot"></span>
+          <span class="status-indicator-text">{{ session.profile()?.driver?.operationalStatus }}</span>
+        </div>
+      }
 
       <div class="notifications-wrapper">
         <button class="btn-bell" (click)="toggleDropdown()" aria-label="Notifications">
@@ -74,10 +84,15 @@
 
         @if (session.role() === 'DRIVER') {
           <a routerLink="/driver/jobs" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-link">Available Jobs</a>
+          <a routerLink="/driver/active" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-link">Active Delivery</a>
+          <a routerLink="/driver/vehicles" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-link">My Vehicles</a>
         }
 
         @if (session.role() === 'ADMIN') {
-          <a routerLink="/admin/dashboard" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-link">Admin Dashboard</a>
+          <a routerLink="/admin/dashboard" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-link">Dashboard</a>
+          <a routerLink="/admin/drivers" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-link">Driver Approvals</a>
+          <a routerLink="/admin/disputes" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-link">Disputes</a>
+          <a routerLink="/admin/shipments" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-link">All Shipments</a>
         }
 
         <div class="mobile-divider"></div>

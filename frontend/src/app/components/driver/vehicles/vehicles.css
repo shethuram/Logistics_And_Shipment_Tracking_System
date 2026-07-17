@@ -66,6 +66,13 @@
   border-color: rgba(115, 115, 115, 0.2);
 }
 
+.status-badge.busy {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #F59E0B;
+  border-color: rgba(245, 158, 11, 0.2);
+  cursor: not-allowed;
+}
+
 .status-indicator {
   width: 8px;
   height: 8px;

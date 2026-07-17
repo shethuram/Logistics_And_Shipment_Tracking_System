@@ -111,6 +111,8 @@ public class PaymentService : IPaymentService
         shipment.Payment.UpdatedAt = DateTime.UtcNow;
         await _shipmentRepo.UpdateAsync(shipment);
 
+        _logger.LogInformation("Payment initiated for Shipment {ShipmentId}. Razorpay Order ID: {RazorpayOrderId}, Amount: {Amount}", shipmentId, razorpayOrderId, amount);
+
         return new InitiatePaymentResponse
         {
             RazorpayOrderId = razorpayOrderId,
@@ -166,6 +168,7 @@ public class PaymentService : IPaymentService
                 payment.Shipment.UpdatedAt = DateTime.UtcNow;
 
                 await _paymentRepo.UpdateAsync(payment);
+                _logger.LogInformation("Razorpay Webhook payment success processed for Shipment {ShipmentId} ({OrderId}). Payment ID: {RazorpayPaymentId}, Razorpay Order ID: {RazorpayOrderId}.", payment.ShipmentId, payment.Shipment.OrderId, paymentId, orderId);
 
                 await _notificationService.CreateNotificationAsync(
                     payment.Shipment.CustomerId,

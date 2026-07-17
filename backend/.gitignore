@@ -10,4 +10,5 @@ Logistics_Shipment_Tracking_System.postman_collection.json
 # Ignore sensitive settings
 appsettings.Development.json
 appsettings.local.json
+Logs/
 

@@ -1,11 +1,12 @@
-import { Component, ChangeDetectionStrategy, OnInit, OnDestroy, inject, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, OnInit, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ShipmentApiService } from '../../../services/shipment.service';
 import { SignalrService } from '../../../services/signalr.service';
 import { SessionService } from '../../../services/session.service';
+import { DriverApiService } from '../../../services/driver.service';
 import { AvailableShipmentDto, ShipmentResponse } from '../../../dtos/shipment.dto';
-import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-driver-jobs',
@@ -15,10 +16,11 @@ import { Subscription } from 'rxjs';
   styleUrl: './jobs.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DriverJobsComponent implements OnInit, OnDestroy {
+export class DriverJobsComponent implements OnInit {
   private shipmentApi = inject(ShipmentApiService);
   private signalr = inject(SignalrService);
   private session = inject(SessionService);
+  private driverApi = inject(DriverApiService);
   private router = inject(Router);
 
   isOnline = signal<boolean>(false);
@@ -29,31 +31,46 @@ export class DriverJobsComponent implements OnInit, OnDestroy {
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
-  private signalrSub: Subscription | null = null;
+  newJobAlert = toSignal(this.signalr.newJobAlert$);
+
+  constructor() {
+    effect(() => {
+      const newJob = this.newJobAlert();
+      if (newJob) {
+        this.availableJobs.update(jobs => {
+          if (jobs.some(j => j.id === newJob.id)) return jobs;
+          return [newJob, ...jobs];
+        });
+      }
+    });
+  }
 
   ngOnInit() {
     const profile = this.session.profile();
     if (profile && profile.driver) {
       this.isOnline.set(profile.driver.operationalStatus === 'ONLINE');
       this.hasActiveVehicle.set(!!profile.driver.activeVehicleId);
+
+      this.driverApi.getVehicles().subscribe({
+        next: (list) => {
+          const activeVehicle = list.find(v => v.isActive);
+          if (activeVehicle) {
+            this.signalr.startConnection().then(() => {
+              this.signalr.joinVehicleGroup(activeVehicle.vehicleType);
+            });
+          } else {
+            this.signalr.startConnection();
+          }
+        },
+        error: () => {
+          this.signalr.startConnection();
+        }
+      });
+    } else {
+      this.signalr.startConnection();
     }
 
     this.loadActiveShipment();
-
-    this.signalr.startConnection().then(() => {
-      this.signalrSub = this.signalr.newJobAlert$.subscribe((newJob: AvailableShipmentDto) => {
-        this.availableJobs.update(jobs => {
-          if (jobs.some(j => j.id === newJob.id)) return jobs;
-          return [newJob, ...jobs];
-        });
-      });
-    });
-  }
-
-  ngOnDestroy() {
-    if (this.signalrSub) {
-      this.signalrSub.unsubscribe();
-    }
   }
 
   loadActiveShipment() {

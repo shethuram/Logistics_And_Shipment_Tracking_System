@@ -4,15 +4,23 @@
     <div class="header-row">
       <h1 class="header-title">My Vehicles & Status</h1>
       @if (getActiveVehicle()) {
-        <button 
-          class="status-badge" 
-          [class.online]="isOnline()" 
-          [class.offline]="!isOnline()"
-          [disabled]="isLoading()"
-          (click)="toggleOnlineStatus()">
-          <span class="status-indicator"></span>
-          {{ isOnline() ? 'Go Offline' : 'Go Online' }}
-        </button>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+          <button 
+            class="status-badge" 
+            [class.online]="isOnline() && !isBusy()" 
+            [class.offline]="!isOnline() && !isBusy()"
+            [class.busy]="isBusy()"
+            [disabled]="isLoading() || isBusy()"
+            (click)="toggleOnlineStatus()">
+            <span class="status-indicator"></span>
+            {{ isBusy() ? 'Busy (On Delivery)' : isOnline() ? 'Go Offline' : 'Go Online' }}
+          </button>
+          @if (isBusy()) {
+            <span style="font-size: 11px; color: #F59E0B; font-weight: 500;">
+              ⚠️ Status locked while on active delivery.
+            </span>
+          }
+        </div>
       } @else {
         <span class="status-badge offline">No Active Vehicle</span>
       }

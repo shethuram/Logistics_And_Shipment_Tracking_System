@@ -11,6 +11,8 @@ using Logistics.Api.Interfaces.Services;
 using Logistics.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
+using Microsoft.Extensions.Logging;
+
 namespace Logistics.Api.Services;
 
 public class AdminService : IAdminService
@@ -18,15 +20,18 @@ public class AdminService : IAdminService
     private readonly AppDbContext _db;
     private readonly IShipmentRepository _shipmentRepo;
     private readonly INotificationService _notificationService;
+    private readonly ILogger<AdminService> _logger;
 
     public AdminService(
         AppDbContext db,
         IShipmentRepository shipmentRepo,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        ILogger<AdminService> logger)
     {
         _db = db;
         _shipmentRepo = shipmentRepo;
         _notificationService = notificationService;
+        _logger = logger;
     }
 
     public async Task<ReassignShipmentResponse> ReassignShipmentAsync(Guid shipmentId)
@@ -54,6 +59,7 @@ public class AdminService : IAdminService
         shipment.UpdatedAt = DateTime.UtcNow;
 
         await _shipmentRepo.UpdateAsync(shipment);
+        _logger.LogInformation("Shipment {ShipmentId} ({OrderId}) force-released back to open pool by Administrator.", shipment.Id, shipment.OrderId);
 
         if (oldDriverUserId.HasValue)
         {
@@ -111,6 +117,16 @@ public class AdminService : IAdminService
         var driversWithHighCancelCount = await _db.Drivers
             .CountAsync(d => d.CancelCount >= 3);
 
+        var successfulPayments = await _db.Payments
+            .Where(p => p.Status == PaymentStatus.SUCCESS)
+            .Select(p => new { p.Amount, p.DriverEarnings, p.PlatformFee, p.Cgst, p.Sgst })
+            .ToListAsync();
+
+        var totalRevenue = successfulPayments.Sum(p => p.Amount);
+        var totalDriverEarnings = successfulPayments.Sum(p => p.DriverEarnings);
+        var totalPlatformFees = successfulPayments.Sum(p => p.PlatformFee);
+        var totalTaxCollected = successfulPayments.Sum(p => p.Cgst + p.Sgst);
+
         return new AdminMetricsResponse
         {
             TotalShipments = totalShipments,
@@ -122,7 +138,11 @@ public class AdminService : IAdminService
             StaleShipments = staleShipments,
             CodPending = codPending,
             DriversOnline = driversOnline,
-            DriversWithHighCancelCount = driversWithHighCancelCount
+            DriversWithHighCancelCount = driversWithHighCancelCount,
+            TotalRevenue = totalRevenue,
+            TotalDriverEarnings = totalDriverEarnings,
+            TotalPlatformFees = totalPlatformFees,
+            TotalTaxCollected = totalTaxCollected
         };
     }
 

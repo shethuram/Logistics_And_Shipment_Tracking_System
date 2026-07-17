@@ -217,6 +217,54 @@
   width: 100%;
 }
 
+.driver-header-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: #171717;
+  border: 1px solid #262626;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.status-indicator-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.driver-header-status[data-status="ONLINE"] .status-indicator-dot {
+  background-color: #22C55E;
+}
+
+.driver-header-status[data-status="OFFLINE"] .status-indicator-dot {
+  background-color: #737373;
+}
+
+.driver-header-status[data-status="ON_DELIVERY"] .status-indicator-dot {
+  background-color: #F59E0B;
+}
+
+.driver-header-status[data-status="ONLINE"] {
+  color: #22C55E;
+  border-color: rgba(34, 197, 150, 0.1);
+}
+
+.driver-header-status[data-status="OFFLINE"] {
+  color: #737373;
+  border-color: rgba(115, 115, 115, 0.1);
+}
+
+.driver-header-status[data-status="ON_DELIVERY"] {
+  color: #F59E0B;
+  border-color: rgba(245, 158, 11, 0.1);
+}
+
 @media (max-width: 768px) {
   .nav-links, .nav-user {
     display: none;

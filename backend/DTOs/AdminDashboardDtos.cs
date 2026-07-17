@@ -22,4 +22,8 @@ public record AdminMetricsResponse
     public int CodPending { get; init; }
     public int DriversOnline { get; init; }
     public int DriversWithHighCancelCount { get; init; }
+    public decimal TotalRevenue { get; init; }
+    public decimal TotalDriverEarnings { get; init; }
+    public decimal TotalPlatformFees { get; init; }
+    public decimal TotalTaxCollected { get; init; }
 }

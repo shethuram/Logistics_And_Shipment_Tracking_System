@@ -54,3 +54,16 @@ public record DriverApprovalResponse
     public ApprovalStatus ApprovalStatus { get; init; }
     public string? ApprovalReason { get; init; }
 }
+
+public record AdminDriverDto
+{
+    public Guid Id { get; init; }
+    public string FullName { get; init; } = string.Empty;
+    public string Phone { get; init; } = string.Empty;
+    public string LicenseNumber { get; init; } = string.Empty;
+    public ApprovalStatus ApprovalStatus { get; init; }
+    public OperationalStatus OperationalStatus { get; init; }
+    public IReadOnlyList<PendingDriverVehicleDto> Vehicles { get; init; } = Array.Empty<PendingDriverVehicleDto>();
+    public int CancelCount { get; init; }
+    public DateTime CreatedAt { get; init; }
+}

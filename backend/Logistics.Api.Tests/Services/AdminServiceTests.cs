@@ -43,7 +43,8 @@ public class AdminServiceTests : IDisposable
         _service = new AdminService(
             _db,
             _shipmentRepoMock.Object,
-            _notificationServiceMock.Object
+            _notificationServiceMock.Object,
+            new Mock<Microsoft.Extensions.Logging.ILogger<AdminService>>().Object
         );
     }
 

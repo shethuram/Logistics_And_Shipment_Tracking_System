@@ -24,7 +24,70 @@ export const appConfig: ApplicationConfig = {
       httpInterceptor: {
         allowedList: [
           {
-            uri: `${environment.apiBaseUrl}/*`,
+            uri: `${environment.apiBaseUrl}/api/auth/*`,
+            tokenOptions: {
+              authorizationParams: {
+                audience: environment.auth0.audience,
+                scope: 'openid profile email offline_access'
+              }
+            }
+          },
+          {
+            uri: `${environment.apiBaseUrl}/api/shipments/*`,
+            tokenOptions: {
+              authorizationParams: {
+                audience: environment.auth0.audience,
+                scope: 'openid profile email offline_access'
+              }
+            }
+          },
+          {
+            uri: `${environment.apiBaseUrl}/api/drivers/*`,
+            tokenOptions: {
+              authorizationParams: {
+                audience: environment.auth0.audience,
+                scope: 'openid profile email offline_access'
+              }
+            }
+          },
+          {
+            uri: `${environment.apiBaseUrl}/api/payments/*`,
+            tokenOptions: {
+              authorizationParams: {
+                audience: environment.auth0.audience,
+                scope: 'openid profile email offline_access'
+              }
+            }
+          },
+          {
+            uri: `${environment.apiBaseUrl}/api/notifications/*`,
+            tokenOptions: {
+              authorizationParams: {
+                audience: environment.auth0.audience,
+                scope: 'openid profile email offline_access'
+              }
+            }
+          },
+          {
+            uri: `${environment.apiBaseUrl}/api/disputes/*`,
+            tokenOptions: {
+              authorizationParams: {
+                audience: environment.auth0.audience,
+                scope: 'openid profile email offline_access'
+              }
+            }
+          },
+          {
+            uri: `${environment.apiBaseUrl}/api/admin/*`,
+            tokenOptions: {
+              authorizationParams: {
+                audience: environment.auth0.audience,
+                scope: 'openid profile email offline_access'
+              }
+            }
+          },
+          {
+            uri: `${environment.apiBaseUrl}/api/tracking/*`,
             tokenOptions: {
               authorizationParams: {
                 audience: environment.auth0.audience,

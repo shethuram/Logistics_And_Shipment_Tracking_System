@@ -4,6 +4,7 @@ import { AuthApiService } from './auth.service';
 import { UserProfileDto } from '../dtos/auth.dto';
 import { Observable, of, tap } from 'rxjs';
 import { take, switchMap, catchError } from 'rxjs/operators';
+import { OperationalStatus } from '../models/enums';
 
 @Injectable({
   providedIn: 'root'
@@ -57,6 +58,36 @@ export class SessionService {
 
   clearSession() {
     this.profileSignal.set(null);
+  }
+
+  updateDriverStatus(status: OperationalStatus) {
+    this.profileSignal.update(p => {
+      if (p && p.driver) {
+        return {
+          ...p,
+          driver: {
+            ...p.driver,
+            operationalStatus: status
+          }
+        };
+      }
+      return p;
+    });
+  }
+
+  updateDriverActiveVehicle(vehicleId: string | null) {
+    this.profileSignal.update(p => {
+      if (p && p.driver) {
+        return {
+          ...p,
+          driver: {
+            ...p.driver,
+            activeVehicleId: vehicleId
+          }
+        };
+      }
+      return p;
+    });
   }
 
   logout() {

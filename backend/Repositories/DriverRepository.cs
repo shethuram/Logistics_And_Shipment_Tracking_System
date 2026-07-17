@@ -40,8 +40,40 @@ public class DriverRepository : IDriverRepository
         return (items, total);
     }
 
+    public async Task<(IReadOnlyList<Driver> Items, int Total)> GetDriversAsync(ApprovalStatus? status, int page, int pageSize)
+    {
+        var query = _db.Drivers
+            .AsNoTracking()
+            .Include(d => d.User)
+            .Include(d => d.Vehicles)
+            .AsQueryable();
+
+        if (status.HasValue)
+        {
+            query = query.Where(d => d.ApprovalStatus == status.Value);
+        }
+
+        query = query.OrderByDescending(d => d.CreatedAt);
+
+        var total = await query.CountAsync();
+
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return (items, total);
+    }
+
     public Task<Driver?> GetByIdAsync(Guid id) =>
         _db.Drivers.FirstOrDefaultAsync(d => d.Id == id);
+
+    public Task<Driver?> GetByIdWithUserAndVehiclesAsync(Guid id) =>
+        _db.Drivers
+            .Include(d => d.User)
+            .Include(d => d.Vehicles)
+            .Include(d => d.ActiveVehicle)
+            .FirstOrDefaultAsync(d => d.Id == id);
 
     public Task<Driver?> GetByUserIdAsync(Guid userId) =>
         _db.Drivers.FirstOrDefaultAsync(d => d.UserId == userId);

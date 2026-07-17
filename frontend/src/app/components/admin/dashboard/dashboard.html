@@ -1,11 +1,174 @@
-<div class="dashboard-container">
-  <div class="main-dashboard">
-    <div class="header">
-      <h2 class="title">Admin Dashboard</h2>
-      <button class="btn-logout" (click)="logout()">Log Out</button>
-    </div>
-    <div class="content-placeholder">
-      <p>Welcome! You can approve drivers, view system shipments, and resolve disputes from here.</p>
-    </div>
+<div class="admin-dashboard-container">
+  <div class="dashboard-header-row">
+    <h1 class="dashboard-header-title">System Metrics & Overview</h1>
+    <button class="btn-refresh" (click)="loadMetrics()">Refresh Metrics</button>
   </div>
+
+  @if (errorMessage()) {
+    <div class="alert-box error">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (isLoading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Fetching real-time metrics...</p>
+    </div>
+  } @else {
+    @if (metrics(); as m) {
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-card-header">
+            <span class="kpi-icon">📦</span>
+            <span class="kpi-title">Total Shipments</span>
+          </div>
+          <div class="kpi-value">{{ m.totalShipments }}</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card-header">
+            <span class="kpi-icon">🚚</span>
+            <span class="kpi-title">Drivers Active</span>
+          </div>
+          <div class="kpi-value">{{ m.driversOnline }}</div>
+        </div>
+
+        <div class="kpi-card warning">
+          <div class="kpi-card-header">
+            <span class="kpi-icon">⏳</span>
+            <span class="kpi-title">Stale Shipments</span>
+          </div>
+          <div class="kpi-value">{{ m.staleShipments }}</div>
+        </div>
+
+        <div class="kpi-card danger">
+          <div class="kpi-card-header">
+            <span class="kpi-icon">🚨</span>
+            <span class="kpi-title">High Cancel Risks</span>
+          </div>
+          <div class="kpi-value">{{ m.driversWithHighCancelCount }}</div>
+        </div>
+      </div>
+
+      <div class="financials-title-row">
+        <h2 class="financials-title">Financial Analytics & Payouts</h2>
+      </div>
+      <div class="kpi-grid financial-grid">
+        <div class="kpi-card financial-card">
+          <div class="kpi-card-header">
+            <span class="kpi-icon">💰</span>
+            <span class="kpi-title">Gross Revenue (GMV)</span>
+          </div>
+          <div class="kpi-value financial-value">₹{{ m.totalRevenue | number:'1.2-2' }}</div>
+        </div>
+
+        <div class="kpi-card financial-card">
+          <div class="kpi-card-header">
+            <span class="kpi-icon">💸</span>
+            <span class="kpi-title">Driver Payouts</span>
+          </div>
+          <div class="kpi-value financial-value">₹{{ m.totalDriverEarnings | number:'1.2-2' }}</div>
+        </div>
+
+        <div class="kpi-card financial-card">
+          <div class="kpi-card-header">
+            <span class="kpi-icon">🛡️</span>
+            <span class="kpi-title">Net Platform Fees</span>
+          </div>
+          <div class="kpi-value financial-value highlight">₹{{ m.totalPlatformFees | number:'1.2-2' }}</div>
+        </div>
+
+        <div class="kpi-card financial-card">
+          <div class="kpi-card-header">
+            <span class="kpi-icon">🏛️</span>
+            <span class="kpi-title">Taxes (GST) Collected</span>
+          </div>
+          <div class="kpi-value financial-value">₹{{ m.totalTaxCollected | number:'1.2-2' }}</div>
+        </div>
+      </div>
+
+      <div class="visuals-grid">
+        <div class="chart-card">
+          <h2 class="visual-card-title">Shipment Status Breakdown</h2>
+          
+          <div class="chart-container">
+            <div class="donut-chart" [style.background]="chartGradient()">
+              <div class="donut-hole">
+                <span class="donut-center-val">{{ m.totalShipments }}</span>
+                <span class="donut-center-lbl">Total</span>
+              </div>
+            </div>
+            
+            <div class="chart-legend">
+              <div class="legend-item">
+                <span class="legend-dot" style="background-color: #22C55E;"></span>
+                <span class="legend-name">Delivered</span>
+                <span class="legend-val">{{ m.delivered }}</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot" style="background-color: #E8A845;"></span>
+                <span class="legend-name">In Transit / Pending</span>
+                <span class="legend-val">{{ m.pending }}</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot" style="background-color: #EF4444;"></span>
+                <span class="legend-name">Pickup Failed</span>
+                <span class="legend-val">{{ m.failed }}</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot" style="background-color: #737373;"></span>
+                <span class="legend-name">Cancelled</span>
+                <span class="legend-val">{{ m.cancelled }}</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot" style="background-color: #3B82F6;"></span>
+                <span class="legend-name">Stale</span>
+                <span class="legend-val">{{ m.staleShipments }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <h2 class="visual-card-title">Fleet Efficiency & Receipts</h2>
+          
+          <div class="metrics-list">
+            <div class="metric-row">
+              <div class="metric-info">
+                <span class="metric-label">⏱️ Average Delivery Speed</span>
+                <p class="metric-desc">Mean completion elapsed duration since booking.</p>
+              </div>
+              <div class="metric-badge-value">
+                {{ m.avgDeliveryTimeMinutes }} <span class="metric-unit">min</span>
+              </div>
+            </div>
+
+            <div class="metric-row">
+              <div class="metric-info">
+                <span class="metric-label">💵 COD Pending Collection</span>
+                <p class="metric-desc">Delivered cash-on-delivery shipments awaiting cash validation.</p>
+              </div>
+              <div class="metric-badge-value warning">
+                {{ m.codPending }} <span class="metric-unit">orders</span>
+              </div>
+            </div>
+
+            <div class="gauge-section">
+              <span class="gauge-title">Driver Cancellation Risk Ratio</span>
+              <div class="progress-bar-container">
+                <div 
+                  class="progress-bar-fill" 
+                  [style.width.%]="m.driversOnline > 0 ? (m.driversWithHighCancelCount / m.driversOnline) * 100 : 0">
+                </div>
+              </div>
+              <div class="gauge-footer">
+                <span>{{ m.driversWithHighCancelCount }} of {{ m.driversOnline }} active drivers have Cancel Count >= 3</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  }
 </div>

@@ -18,13 +18,14 @@ export interface DriverLocationDto {
 }
 
 export interface PublicTrackingResponseDto {
+  id: string;
   orderId: string;
   status: string;
   pickupAddress: string;
   dropAddress: string;
   timeline: TimelineEntryDto[];
   driver?: PublicTrackingDriverDto;
-  liveLocation?: DriverLocationDto;
+  driverLocation?: DriverLocationDto;
 }
 
 export interface LiveTrackingResponse {

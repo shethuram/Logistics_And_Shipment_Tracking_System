@@ -1,0 +1,199 @@
+<div class="admin-shipments-container">
+  <div class="dashboard-header-row">
+    <h1 class="dashboard-header-title">Shipment Control Center</h1>
+    <div class="header-actions">
+      <button 
+        class="btn-export" 
+        [disabled]="isExporting() || isLoading()" 
+        (click)="exportCsv()">
+        {{ isExporting() ? 'Exporting...' : 'Export to CSV' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="filter-panel">
+    <div class="filter-row">
+      <div class="form-group flex-2">
+        <label class="form-label">Search Order ID / Phone</label>
+        <input 
+          type="text" 
+          [ngModel]="searchQuery()" 
+          (ngModelChange)="searchQuery.set($event)" 
+          (keyup.enter)="applyFilters()"
+          class="form-input" 
+          placeholder="e.g. TRK-20260715 or 98765...">
+      </div>
+
+      <div class="form-group flex-1">
+        <label class="form-label">Status</label>
+        <select 
+          [ngModel]="selectedStatus()" 
+          (ngModelChange)="selectedStatus.set($event); applyFilters()" 
+          class="form-select">
+          <option value="">All Statuses</option>
+          <option value="OPEN">Open</option>
+          <option value="ASSIGNED">Assigned</option>
+          <option value="IN_TRANSIT">In Transit</option>
+          <option value="DELIVERED">Delivered</option>
+          <option value="CANCELLED">Cancelled</option>
+          <option value="PICKUP_FAILED">Pickup Failed</option>
+          <option value="STALE">Stale</option>
+        </select>
+      </div>
+
+      <div class="form-group flex-1">
+        <label class="form-label">From Date</label>
+        <input 
+          type="date" 
+          [ngModel]="dateFrom()" 
+          (ngModelChange)="dateFrom.set($event); applyFilters()" 
+          class="form-input">
+      </div>
+
+      <div class="form-group flex-1">
+        <label class="form-label">To Date</label>
+        <input 
+          type="date" 
+          [ngModel]="dateTo()" 
+          (ngModelChange)="dateTo.set($event); applyFilters()" 
+          class="form-input">
+      </div>
+    </div>
+
+    <div class="filter-actions-row">
+      <button class="btn-apply" (click)="applyFilters()">Search & Apply</button>
+      <button class="btn-reset" (click)="resetFilters()">Reset Filters</button>
+    </div>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="alert-box error">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (isLoading() && shipments().length === 0) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading shipment records...</p>
+    </div>
+  } @else {
+    @if (shipments().length === 0) {
+      <div class="empty-state">
+        <p>No shipments match the query. Try adjusting your filters!</p>
+      </div>
+    } @else {
+      <div class="shipments-grid">
+        @for (s of shipments(); track s.id) {
+          <div class="shipment-row-card">
+            <div class="row-card-main-info">
+              <div class="row-header">
+                <span class="order-id">{{ s.orderId }}</span>
+                <span class="status-badge" [attr.data-status]="s.status">{{ s.status }}</span>
+              </div>
+              
+              <div class="row-route">
+                <div class="route-node">
+                  <span class="node-dot pickup"></span>
+                  <span class="node-addr">{{ s.pickupAddress }}</span>
+                </div>
+                <div class="route-node">
+                  <span class="node-dot dropoff"></span>
+                  <span class="node-addr">{{ s.dropAddress }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="row-card-meta-info">
+              <div class="meta-item">
+                <span class="meta-lbl">Receiver:</span>
+                <span class="meta-val">{{ s.receiverName }} ({{ s.receiverPhone }})</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-lbl">Driver Assignment:</span>
+                @if (s.driver) {
+                  <span class="meta-val driver-assigned">🚚 {{ s.driver.fullName }} ({{ s.driver.vehicleNumber || 'No Plate' }})</span>
+                } @else {
+                  <span class="meta-val warning">Unassigned (Open Pool)</span>
+                }
+              </div>
+              <div class="meta-item">
+                <span class="meta-lbl">Total Cost:</span>
+                <span class="meta-val price">₹{{ s.totalAmount | number:'1.2-2' }}</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-lbl">Method / Payment:</span>
+                <span class="meta-val badge-pay" [attr.data-payment-status]="s.paymentStatus">
+                  {{ s.paymentMethod }} ({{ s.paymentStatus }})
+                </span>
+              </div>
+            </div>
+
+            <div class="row-card-actions">
+              @if (s.driver) {
+                <button 
+                  class="btn-tracking" 
+                  (click)="toggleTrackingHistory(s.id)">
+                  {{ expandedTrackingShipmentId() === s.id ? 'Hide Location History' : 'View Location Logs' }}
+                </button>
+              }
+              @if (s.status !== 'DELIVERED' && s.status !== 'CANCELLED' && s.status !== 'PICKUP_FAILED') {
+                <button 
+                  class="btn-reassign" 
+                  [disabled]="isLoading()" 
+                  (click)="reassignShipment(s.id)">
+                  Release / Force Reassign
+                </button>
+              }
+            </div>
+
+            @if (expandedTrackingShipmentId() === s.id) {
+              <div class="tracking-history-panel">
+                <h4 class="history-title">Driver Coordinate Log History</h4>
+                
+                @if (isTrackingLoading()) {
+                  <div class="mini-loading">
+                    <span class="mini-spinner"></span> Loading coordinate logs...
+                  </div>
+                } @else {
+                  @if (trackingHistory().length === 0) {
+                    <p class="no-history-text">No location coordinates have been registered for this shipment yet.</p>
+                  } @else {
+                    <div class="history-table-container">
+                      <table class="history-table">
+                        <thead>
+                          <tr>
+                            <th>Timestamp</th>
+                            <th>Latitude</th>
+                            <th>Longitude</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (t of trackingHistory(); track t.recordedAt) {
+                            <tr>
+                              <td class="time-cell">{{ t.recordedAt | date:'medium' }}</td>
+                              <td class="coord-cell">{{ t.latitude | number:'1.6-6' }}</td>
+                              <td class="coord-cell">{{ t.longitude | number:'1.6-6' }}</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      @if (totalCount() > pageSize) {
+        <div class="pagination-row">
+          <button class="btn-page" [disabled]="currentPage() === 1 || isLoading()" (click)="prevPage()">Previous</button>
+          <span class="page-indicator">Page {{ currentPage() }} (Total: {{ totalCount() }} shipments)</span>
+          <button class="btn-page" [disabled]="currentPage() * pageSize >= totalCount() || isLoading()" (click)="nextPage()">Next</button>
+        </div>
+      }
+    }
+  }
+</div>

@@ -49,7 +49,8 @@ public class DisputeServiceTests : IDisposable
             _shipmentRepoMock.Object,
             _notificationServiceMock.Object,
             _llmServiceMock.Object,
-            _db
+            _db,
+            new Mock<Microsoft.Extensions.Logging.ILogger<DisputeService>>().Object
         );
     }
 

@@ -26,3 +26,6 @@ export type DisputeStatus = 'OPEN' | 'RESOLVED' | 'ESCALATED';
 export type DisputeLlmType = 'WRONG_ADDRESS' | 'LATE_DELIVERY' | 'DAMAGED_PACKAGE' | 'DRIVER_BEHAVIOUR';
 
 export type DriverApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+
+export type OperationalStatus = 'ONLINE' | 'OFFLINE' | 'ON_DELIVERY';
+

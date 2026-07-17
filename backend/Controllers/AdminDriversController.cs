@@ -1,5 +1,6 @@
 using Logistics.Api.DTOs;
 using Logistics.Api.Interfaces.Services;
+using Logistics.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -42,6 +43,21 @@ public class AdminDriversController : ControllerBase
     public async Task<IActionResult> Suspend(Guid id, SuspendDriverRequest request)
     {
         var result = await _adminDriverService.SuspendDriverAsync(id, request);
+        return Ok(result);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetDrivers([FromQuery] ApprovalStatus? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        var result = await _adminDriverService.GetDriversAsync(status, page, pageSize);
+        return Ok(result);
+    }
+
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var result = await _adminDriverService.GetDriverByIdAsync(id);
+        if (result == null) return NotFound();
         return Ok(result);
     }
 }

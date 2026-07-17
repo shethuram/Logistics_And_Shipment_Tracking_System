@@ -497,3 +497,32 @@
     box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
   }
 }
+
+.job-instructions-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background-color: rgba(232, 168, 69, 0.03);
+  border: 1px solid rgba(232, 168, 69, 0.08);
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin-top: 8px;
+}
+
+.inst-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #E8A845;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.notes-preview {
+  font-size: 12px;
+  color: #A3A3A3;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}

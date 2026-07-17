@@ -10,6 +10,8 @@ using Logistics.Api.Services;
 using Moq;
 using Xunit;
 
+using Microsoft.Extensions.Logging;
+
 namespace Logistics.Api.Tests.Services;
 
 public class AdminDriverServiceTests
@@ -20,7 +22,7 @@ public class AdminDriverServiceTests
     public AdminDriverServiceTests()
     {
         _driverRepoMock = new Mock<IDriverRepository>();
-        _service = new AdminDriverService(_driverRepoMock.Object);
+        _service = new AdminDriverService(_driverRepoMock.Object, new Mock<ILogger<AdminDriverService>>().Object);
     }
 
     [Fact]

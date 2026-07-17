@@ -41,6 +41,26 @@
           </div>
         </div>
 
+        @if (job.preferredWindow || job.driverInstruction) {
+          <div class="instructions-card">
+            <h3 class="instructions-title">📋 Delivery Instructions</h3>
+            <div class="instructions-content">
+              @if (job.preferredWindow) {
+                <div class="instruction-row">
+                  <span class="instruction-label">Preferred Time:</span>
+                  <span class="instruction-value">{{ job.preferredWindow === 'MORNING' ? '🌅 Morning (8 AM - 12 PM)' : job.preferredWindow === 'AFTERNOON' ? '☀️ Afternoon (12 PM - 4 PM)' : '🌌 Evening (4 PM - 8 PM)' }}</span>
+                </div>
+              }
+              @if (job.driverInstruction) {
+                <div class="instruction-row notes-box">
+                  <span class="instruction-label" style="color: #E8A845; font-weight: 700;">🤖 AI Driver Instructions:</span>
+                  <p class="instruction-text" style="border-left-color: #E8A845; background-color: rgba(232, 168, 69, 0.05);">"{{ job.driverInstruction }}"</p>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
         <div class="job-route">
           <div class="route-stop pickup">
             <span class="stop-label">Pickup Location</span>
@@ -108,7 +128,7 @@
           </div>
         }
 
-        @if (job.status === 'DELIVERED' && job.paymentMethod === 'COD' && job.paymentStatus !== 'PAID') {
+        @if (job.status === 'DELIVERED' && job.paymentMethod === 'COD' && job.paymentStatus !== 'SUCCESS') {
           <div class="otp-form-box">
             <h3 class="otp-title">Cash Collection Required</h3>
             <p>Please collect ₹{{ job.totalAmount | number:'1.2-2' }} from the receiver before completing the trip.</p>
