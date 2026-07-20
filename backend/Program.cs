@@ -57,7 +57,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngular", policy =>
     {
-        policy.WithOrigins("http://localhost:4200", "https://logistics-web-shethu.azurestaticapps.net")
+        policy.WithOrigins(
+            "http://localhost:4200",
+            "https://gray-forest-043913600.7.azurestaticapps.net"
+        )
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
