@@ -130,15 +130,44 @@ public class AuthService : IAuthService
         if (file == null || file.Length == 0)
             throw new ValidationException("License file is required.");
 
+        var extension = Path.GetExtension(file.FileName);
+        var fileName = $"{Guid.NewGuid()}{extension}";
+
+        var storageConn = _configuration["AzureStorage:ConnectionString"] ?? _configuration["AzureStorageConnectionString"];
+        var blobContainerName = _configuration["AzureStorage:ContainerName"] ?? "driver-licenses";
+
+        if (!string.IsNullOrEmpty(storageConn))
+        {
+            try
+            {
+                var containerClient = new Azure.Storage.Blobs.BlobContainerClient(storageConn, blobContainerName);
+                await containerClient.CreateIfNotExistsAsync(Azure.Storage.Blobs.Models.PublicAccessType.Blob);
+
+                var blobClient = containerClient.GetBlobClient(fileName);
+                using (var stream = file.OpenReadStream())
+                {
+                    await blobClient.UploadAsync(stream, new Azure.Storage.Blobs.Models.BlobHttpHeaders
+                    {
+                        ContentType = file.ContentType ?? "image/jpeg"
+                    });
+                }
+
+                return blobClient.Uri.ToString();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Azure Blob Storage upload failed. Falling back to local file storage.");
+            }
+        }
+
+        // Local storage fallback for Development
         var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "licenses");
         if (!Directory.Exists(uploadsFolder))
         {
             Directory.CreateDirectory(uploadsFolder);
         }
 
-        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
         var filePath = Path.Combine(uploadsFolder, fileName);
-
         using (var stream = new FileStream(filePath, FileMode.Create))
         {
             await file.CopyToAsync(stream);
