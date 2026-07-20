@@ -37,6 +37,6 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'logistics-agent-shethu'
+          app-name: 'logistics-agent-shethu-gngxe7hngueub7eg'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_AGENT }}
           package: ./agent-deploy.zip
