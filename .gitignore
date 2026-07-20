@@ -1,0 +1,31 @@
+# IDE / OS / Metadata
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.user
+*.suo
+
+# Build & Dependencies
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/tmp/
+**/.angular/cache/
+**/venv/
+**/__pycache__/
+*.pyc
+
+# Local Environment & Secrets
+appsettings.Development.json
+appsettings.local.json
+.env
+.env.local
+Logs/
+**/Logs/
+
+# Database / SQLite Local Artifacts
+*.db
+*.db-journal
+*.sqlite

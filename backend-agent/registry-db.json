@@ -1,0 +1,30 @@
+[
+  {
+    "LicenseNumber": "TN33 20230012345",
+    "FullName": "Driver Name",
+    "ExpiryDate": "2030-05-15",
+    "Status": "Active",
+    "Classes": ["LMV", "MCWG"]
+  },
+  {
+    "LicenseNumber": "KA03 20150012345",
+    "FullName": "John Doe",
+    "ExpiryDate": "2024-01-01",
+    "Status": "Expired",
+    "Classes": ["LMV"]
+  },
+  {
+    "LicenseNumber": "DL01 20200054321",
+    "FullName": "Jane Smith",
+    "ExpiryDate": "2029-08-20",
+    "Status": "Active",
+    "Classes": ["MCWOG", "MCWG"]
+  },
+  {
+    "LicenseNumber": "TN46 20210002538",
+    "FullName": "SHETHU RAM M R",
+    "ExpiryDate": "2042-10-20",
+    "Status": "Active",
+    "Classes": ["LMV", "MCWG"]
+  }
+]
