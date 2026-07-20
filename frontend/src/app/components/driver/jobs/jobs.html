@@ -63,7 +63,7 @@
                 <div class="job-instructions-summary" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
                   @if (job.preferredWindow) {
                     <div style="font-size: 12px;">
-                      <span class="inst-badge">📅 Time Window:</span>
+                      <span class="inst-badge">Time Window:</span>
                       <span style="color: #F5F4F0; margin-left: 4px;">
                         {{ job.preferredWindow === 'MORNING' ? 'Morning (8AM-12PM)' : job.preferredWindow === 'AFTERNOON' ? 'Afternoon (12PM-4PM)' : 'Evening (4PM-8PM)' }}
                       </span>
@@ -72,14 +72,20 @@
                   
                   @if (job.driverInstruction) {
                     <div class="info-note-box" style="background-color: rgba(232, 168, 69, 0.05); border-left: 3px solid #E8A845; padding: 8px 12px; border-radius: 2px; text-align: left;">
-                      <span style="font-size: 11px; font-weight: 700; color: #E8A845; text-transform: uppercase; display: block; margin-bottom: 2px;">💡 Driver Instruction (AI):</span>
+                      <span style="font-size: 11px; font-weight: 700; color: #E8A845; text-transform: uppercase; display: block; margin-bottom: 2px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 13px; height: 13px; color: #E8A845; display: inline-block; vertical-align: middle; margin-right: 4px; margin-top: -2px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        Driver Instruction (AI):
+                      </span>
                       <p style="margin: 0; font-size: 12px; color: #D4D4D4; font-style: italic; line-height: 1.4;">"{{ job.driverInstruction }}"</p>
                     </div>
                   }
 
                   @if (job.riskFlag) {
                     <div class="risk-note-box" style="background-color: rgba(239, 68, 68, 0.05); border-left: 3px solid #EF4444; padding: 8px 12px; border-radius: 2px; text-align: left;">
-                      <span style="font-size: 11px; font-weight: 700; color: #EF4444; text-transform: uppercase; display: block; margin-bottom: 2px;">⚠️ Risk Flagged ({{ job.riskSeverity }} Severity):</span>
+                      <span style="font-size: 11px; font-weight: 700; color: #EF4444; text-transform: uppercase; display: block; margin-bottom: 2px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 13px; height: 13px; color: #EF4444; display: inline-block; vertical-align: middle; margin-right: 4px; margin-top: -2px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                        Risk Flagged ({{ job.riskSeverity }} Severity):
+                      </span>
                       <p style="margin: 0; font-size: 12px; color: #D4D4D4; line-height: 1.4;">{{ job.riskReason }}</p>
                     </div>
                   }

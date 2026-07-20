@@ -291,6 +291,21 @@ public class ShipmentService : IShipmentService
         return shipment?.ToShipmentResponse();
     }
 
+    public async Task<IReadOnlyList<ShipmentResponse>> GetDriverHistoryAsync(Guid driverUserId)
+    {
+        var driver = await _driverRepo.GetByUserIdAsync(driverUserId);
+        if (driver == null)
+            throw new NotFoundException("Driver profile not found.");
+
+        var shipments = await _db.Shipments
+            .Include(s => s.Payment)
+            .Where(s => s.DriverId == driver.Id)
+            .OrderByDescending(s => s.CreatedAt)
+            .ToListAsync();
+
+        return shipments.Select(s => s.ToShipmentResponse()).ToList();
+    }
+
     public async Task<ClaimShipmentResponse> ClaimAsync(Guid id, Guid driverUserId)
     {
         var driver = await _driverRepo.GetByUserIdAsync(driverUserId);
@@ -381,7 +396,7 @@ public class ShipmentService : IShipmentService
                 }
             });
 
-            await _notificationService.CreateNotificationAsync(shipment.CustomerId, shipment.Id, "Driver Assigned", $"A driver has been assigned to your shipment {shipment.OrderId}.");
+            await _notificationService.CreateNotificationAsync(shipment.CustomerId, shipment.Id, "Driver Assigned", $"A driver has been assigned to your shipment {shipment.OrderId}. Verification OTPs have been sent to your email.");
             await _notificationService.BroadcastShipmentUpdateAsync(shipment.Id, "ASSIGNED", new { shipment.DriverId, shipment.OrderId });
 
             return shipment.ToClaimShipmentResponse();
@@ -799,7 +814,13 @@ public class ShipmentService : IShipmentService
                 shipment.PickupAddress,
                 shipment.DropAddress,
                 PackageType = shipment.PackageType.ToString(),
-                shipment.WeightKg
+                shipment.WeightKg,
+                PreferredWindow = shipment.PreferredWindow.ToString(),
+                DriverInstruction = shipment.DriverInstruction,
+                DriverEarnings = shipment.Payment != null ? shipment.Payment.DriverEarnings : 0m,
+                RiskFlag = shipment.RiskFlag,
+                RiskSeverity = shipment.RiskSeverity.ToString(),
+                RiskReason = shipment.RiskReason
             });
         }
     }

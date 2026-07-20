@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy, signal, OnInit, OnDestroy, effect } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy, signal, OnInit, OnDestroy, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -36,16 +36,19 @@ export class NavbarComponent implements OnInit, OnDestroy {
         this.unreadCount.update(c => c + 1);
       }
     });
+
+    effect(() => {
+      const profile = this.session.profile();
+      if (profile && profile.isRegistered && profile.userId) {
+        untracked(() => {
+          this.loadInitialNotifications();
+          this.initializeSignalR(profile.userId!);
+        });
+      }
+    }, { allowSignalWrites: true });
   }
 
-  ngOnInit() {
-    this.session.resolveSession().subscribe(profile => {
-      if (profile && profile.isRegistered && profile.userId) {
-        this.loadInitialNotifications();
-        this.initializeSignalR(profile.userId);
-      }
-    });
-  }
+  ngOnInit() {}
 
   loadInitialNotifications() {
     this.notificationApi.getMyNotifications(1, 5).subscribe({
@@ -62,6 +65,9 @@ export class NavbarComponent implements OnInit, OnDestroy {
   initializeSignalR(userId: string) {
     this.signalrService.startConnection().then(() => {
       this.signalrService.joinUserGroup(userId);
+      if (this.session.role() === 'ADMIN') {
+        this.signalrService.joinAdminGroup();
+      }
     });
   }
 

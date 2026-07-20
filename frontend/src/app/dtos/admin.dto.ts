@@ -78,4 +78,8 @@ export interface AdminDriverDto {
   vehicles: PendingDriverVehicleDto[];
   cancelCount: number;
   createdAt: string;
+  verificationStatus: string;
+  verificationReport?: string;
+  licenseFileUrl?: string;
+  allowedVehicleTypes: string[];
 }

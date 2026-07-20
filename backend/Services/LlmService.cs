@@ -29,9 +29,9 @@ public class LlmService : ILlmService
     public async Task<(string Summary, DisputeLlmType Type, string SuggestedResolution)> AnalyzeDisputeAsync(string complaintText)
     {
         var systemPrompt = await ReadPromptFileAsync("DisputePrompt.txt");
-        var responseText = await CallGroqAsync(systemPrompt, complaintText);
+        var responseText = await CallAnthropicAsync(systemPrompt, complaintText);
 
-        using var parsedDoc = JsonDocument.Parse(responseText);
+        using var parsedDoc = JsonDocument.Parse(ExtractJson(responseText));
         var root = parsedDoc.RootElement;
 
         var summary = root.GetProperty("summary").GetString() ?? string.Empty;
@@ -49,9 +49,9 @@ public class LlmService : ILlmService
     public async Task<(bool RiskFlag, RiskSeverity RiskSeverity, string? RiskReason, TimeOnly? PreferredDeliveryAfter, string? DriverInstruction)> ParseDeliveryNoteAsync(string notes)
     {
         var systemPrompt = await ReadPromptFileAsync("DeliveryNotePrompt.txt");
-        var responseText = await CallGroqAsync(systemPrompt, notes);
+        var responseText = await CallAnthropicAsync(systemPrompt, notes);
 
-        using var parsedDoc = JsonDocument.Parse(responseText);
+        using var parsedDoc = JsonDocument.Parse(ExtractJson(responseText));
         var root = parsedDoc.RootElement;
 
         var risk = root.GetProperty("risk").GetBoolean();
@@ -80,7 +80,7 @@ public class LlmService : ILlmService
         return (risk, severity, reason, prefTime, driverInstruction);
     }
 
-    private async Task<string> CallGroqAsync(string systemPrompt, string userContent)
+    private async Task<string> CallAnthropicAsync(string systemPrompt, string userContent)
     {
         var url = _config["LlmSettings:Url"]
             ?? throw new InvalidOperationException("LlmSettings:Url is not configured.");
@@ -89,19 +89,19 @@ public class LlmService : ILlmService
         var apiKey = GetApiKey();
 
         using var client = _httpClientFactory.CreateClient();
-        client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", apiKey);
-        client.Timeout = TimeSpan.FromSeconds(10);
+        client.DefaultRequestHeaders.Add("x-api-key", apiKey);
+        client.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+        client.Timeout = TimeSpan.FromSeconds(15);
 
         var requestPayload = new
         {
             model,
+            max_tokens = 1000,
+            system = systemPrompt,
             messages = new[]
             {
-                new { role = "system", content = systemPrompt },
                 new { role = "user", content = userContent }
             },
-            response_format = new { type = "json_object" },
             temperature = 0.1
         };
 
@@ -109,10 +109,10 @@ public class LlmService : ILlmService
         response.EnsureSuccessStatusCode();
 
         var responseJson = await response.Content.ReadFromJsonAsync<JsonObject>();
-        var responseText = responseJson?["choices"]?[0]?["message"]?["content"]?.ToString();
+        var responseText = responseJson?["content"]?[0]?["text"]?.ToString();
 
         if (string.IsNullOrEmpty(responseText))
-            throw new InvalidOperationException("Groq API returned empty response.");
+            throw new InvalidOperationException("Anthropic API returned empty response.");
 
         _logger.LogInformation("RAW LLM RESPONSE: {ResponseText}", responseText);
 
@@ -163,5 +163,16 @@ public class LlmService : ILlmService
         }
 
         throw new FileNotFoundException($"Prompt file '{fileName}' could not be located.");
+    }
+
+    private static string ExtractJson(string text)
+    {
+        var startIndex = text.IndexOf('{');
+        var endIndex = text.LastIndexOf('}');
+        if (startIndex != -1 && endIndex != -1 && endIndex > startIndex)
+        {
+            return text.Substring(startIndex, endIndex - startIndex + 1);
+        }
+        return text;
     }
 }

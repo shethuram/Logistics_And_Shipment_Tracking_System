@@ -18,7 +18,7 @@ export class AuthApiService {
     return this.http.post<any>(`${environment.apiBaseUrl}/api/auth/register/customer`, payload);
   }
 
-  registerDriver(payload: DriverRegistrationDto): Observable<any> {
+  registerDriver(payload: FormData): Observable<any> {
     return this.http.post<any>(`${environment.apiBaseUrl}/api/auth/register/driver`, payload);
   }
 }

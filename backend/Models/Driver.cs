@@ -26,6 +26,12 @@ public class Driver
 
     public int CancelCount { get; set; }
 
+    public string? LicenseFileUrl { get; set; }
+    public VerificationStatus VerificationStatus { get; set; } = VerificationStatus.NOT_STARTED;
+    public string? VerificationReport { get; set; }
+    public string[]? LicenseClasses { get; set; }
+    public string[]? AllowedVehicleTypes { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public User User { get; set; } = null!;

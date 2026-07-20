@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, inject, PLATFORM_ID, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, AfterViewInit, inject, PLATFORM_ID, ChangeDetectionStrategy, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -9,6 +9,7 @@ import { TrackingApiService } from '../../../services/tracking.service';
 import { DisputeApiService } from '../../../services/dispute.service';
 import { ShipmentResponse, UpdateShipmentRequest } from '../../../dtos/shipment.dto';
 import { PreferredWindow } from '../../../models/enums';
+import { SignalrService } from '../../../services/signalr.service';
 
 @Component({
   selector: 'app-shipment-details',
@@ -19,6 +20,12 @@ import { PreferredWindow } from '../../../models/enums';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CustomerShipmentDetailsComponent implements OnInit, OnDestroy, AfterViewInit {
+  @HostListener('window:resize')
+  onResize() {
+    if (this.map) {
+      this.map.invalidateSize();
+    }
+  }
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private platformId = inject(PLATFORM_ID);
@@ -26,6 +33,7 @@ export class CustomerShipmentDetailsComponent implements OnInit, OnDestroy, Afte
   private trackingApi = inject(TrackingApiService);
   private disputeApi = inject(DisputeApiService);
   private fb = inject(FormBuilder);
+  private signalr = inject(SignalrService);
 
   private isBrowser = isPlatformBrowser(this.platformId);
   private L: any = null;
@@ -63,6 +71,32 @@ export class CustomerShipmentDetailsComponent implements OnInit, OnDestroy, Afte
       specialNotes: ['', [Validators.maxLength(500)]]
     });
     this.loadShipmentDetails();
+
+    this.signalr.startConnection().then(() => {
+      this.signalr.joinShipmentGroup(this.shipmentId);
+    });
+
+    this.subs.add(
+      this.signalr.shipmentUpdated$.subscribe(data => {
+        const sid = data.shipmentId || data.ShipmentId || data.id || data.Id;
+        if (sid && sid.toString().toLowerCase() === this.shipmentId.toLowerCase()) {
+          this.loadShipmentDetails(true);
+        }
+      })
+    );
+
+    this.subs.add(
+      this.signalr.locationUpdated$.subscribe(data => {
+        const sid = data.shipmentId || data.ShipmentId || data.id || data.Id;
+        if (sid && sid.toString().toLowerCase() === this.shipmentId.toLowerCase()) {
+          const lat = data.latitude || data.Latitude;
+          const lng = data.longitude || data.Longitude;
+          if (lat && lng) {
+            this.updateDriverMarker(lat, lng);
+          }
+        }
+      })
+    );
   }
 
   ngAfterViewInit() {
@@ -75,8 +109,10 @@ export class CustomerShipmentDetailsComponent implements OnInit, OnDestroy, Afte
     this.L = await import('leaflet');
   }
 
-  loadShipmentDetails() {
-    this.isLoading.set(true);
+  loadShipmentDetails(silent: boolean = false) {
+    if (!silent) {
+      this.isLoading.set(true);
+    }
     this.errorMessage.set(null);
 
     this.shipmentApi.getShipment(this.shipmentId).subscribe({
@@ -101,18 +137,13 @@ export class CustomerShipmentDetailsComponent implements OnInit, OnDestroy, Afte
     }
 
     if (currentShipment.status === 'IN_TRANSIT') {
-      this.subs.add(
-        interval(5000).pipe(
-          startWith(0),
-          switchMap(() => this.trackingApi.getLiveLocation(this.shipmentId).pipe(
-            catchError(() => of(null))
-          ))
-        ).subscribe(res => {
+      this.trackingApi.getLiveLocation(this.shipmentId).subscribe({
+        next: (res) => {
           if (res && res.driverLocation) {
             this.updateDriverMarker(res.driverLocation.latitude, res.driverLocation.longitude);
           }
-        })
-      );
+        }
+      });
     }
   }
 
@@ -252,6 +283,7 @@ export class CustomerShipmentDetailsComponent implements OnInit, OnDestroy, Afte
 
   ngOnDestroy() {
     this.subs.unsubscribe();
+    this.signalr.leaveShipmentGroup(this.shipmentId);
     if (this.map) {
       this.map.remove();
     }

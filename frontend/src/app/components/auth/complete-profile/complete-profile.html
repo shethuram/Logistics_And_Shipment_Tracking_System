@@ -37,6 +37,14 @@
         <span class="error-text">Enter a valid license (Format: SSRR YYYYNNNNNNN, e.g. TN45 20150012345).</span>
         }
       </div>
+
+      <div class="form-group">
+        <label class="input-label">Upload License Image / PDF</label>
+        <input type="file" (change)="onFileSelected($event)" accept="image/*,application/pdf" class="form-control" />
+        @if (fileError()) {
+        <span class="error-text">{{ fileError() }}</span>
+        }
+      </div>
       }
 
       @if (errorMessage()) {

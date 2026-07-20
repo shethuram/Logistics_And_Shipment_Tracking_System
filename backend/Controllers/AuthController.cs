@@ -31,9 +31,10 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register/driver")]
-    public async Task<IActionResult> RegisterDriver(RegisterDriverRequest request)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> RegisterDriver([FromForm] RegisterDriverRequest request, Microsoft.AspNetCore.Http.IFormFile licenseFile)
     {
-        var result = await _authService.RegisterDriverAsync(request);
+        var result = await _authService.RegisterDriverAsync(request, licenseFile);
         return Ok(result);
     }
 
@@ -64,7 +65,10 @@ public class AuthController : ControllerBase
                 approvalStatus = user.Driver.ApprovalStatus,
                 approvalReason = user.Driver.ApprovalReason,
                 operationalStatus = user.Driver.OperationalStatus,
-                activeVehicleId = user.Driver.ActiveVehicleId
+                activeVehicleId = user.Driver.ActiveVehicleId,
+                verificationStatus = user.Driver.VerificationStatus,
+                licenseFileUrl = user.Driver.LicenseFileUrl,
+                licenseNumber = user.Driver.LicenseNumber
             };
         }
 

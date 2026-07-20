@@ -7,6 +7,8 @@ using Logistics.Api.Interfaces.Services;
 using Logistics.Api.Mappings;
 using Logistics.Api.Models;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace Logistics.Api.Services;
 
@@ -50,6 +52,15 @@ public class NotificationService : INotificationService
             notification.CreatedAt,
             notification.ShipmentId
         });
+    }
+
+    public async Task CreateAdminNotificationAsync(Guid? shipmentId, string title, string message)
+    {
+        var admins = await _db.Users.AsNoTracking().Where(u => u.Role == UserRole.ADMIN).ToListAsync();
+        foreach (var admin in admins)
+        {
+            await CreateNotificationAsync(admin.Id, shipmentId, title, message);
+        }
     }
 
     public async Task BroadcastShipmentUpdateAsync(Guid shipmentId, string status, object data)

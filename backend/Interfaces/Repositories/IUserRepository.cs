@@ -8,4 +8,5 @@ public interface IUserRepository
     Task<bool> ExistsByEmailAsync(string email);
     Task<bool> ExistsByPhoneAsync(string phone);
     Task<User> AddAsync(User user);
+    Task<User> UpdateAsync(User user);
 }

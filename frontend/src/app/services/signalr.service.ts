@@ -16,6 +16,7 @@ export class SignalrService {
   public shipmentUpdated$ = new Subject<any>();
   public locationUpdated$ = new Subject<any>();
   public newJobAlert$ = new Subject<any>();
+  public adminAlert$ = new Subject<any>();
 
   async startConnection() {
     if (this.connection) return;
@@ -48,6 +49,10 @@ export class SignalrService {
 
     this.connection.on('newJobAlert', (data: any) => {
       this.newJobAlert$.next(data);
+    });
+
+    this.connection.on('adminAlert', (data: any) => {
+      this.adminAlert$.next(data);
     });
 
     try {
@@ -96,6 +101,20 @@ export class SignalrService {
     if (this.connection) {
       this.connection.invoke('LeaveVehicleGroup', vehicleType)
         .catch(err => console.error('Error invoking LeaveVehicleGroup:', err));
+    }
+  }
+
+  joinAdminGroup() {
+    if (this.connection) {
+      this.connection.invoke('JoinAdminGroup')
+        .catch(err => console.error('Error invoking JoinAdminGroup:', err));
+    }
+  }
+
+  leaveAdminGroup() {
+    if (this.connection) {
+      this.connection.invoke('LeaveAdminGroup')
+        .catch(err => console.error('Error invoking LeaveAdminGroup:', err));
     }
   }
 }

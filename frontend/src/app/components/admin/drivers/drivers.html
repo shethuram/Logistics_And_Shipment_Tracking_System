@@ -1,6 +1,6 @@
 <div class="admin-drivers-container">
   <div class="dashboard-header-row">
-    <h1 class="dashboard-header-title">Driver Directory & Fleet Approvals</h1>
+    <h1 class="dashboard-header-title">Driver Directory and Fleet Approvals</h1>
     <span class="count-badge">{{ totalCount() }} Drivers</span>
   </div>
 
@@ -16,25 +16,25 @@
       class="btn-pill" 
       [class.active]="selectedStatus() === 'PENDING'" 
       (click)="filterByStatus('PENDING')">
-      ⏳ Pending
+      Pending
     </button>
     <button 
       class="btn-pill" 
       [class.active]="selectedStatus() === 'APPROVED'" 
       (click)="filterByStatus('APPROVED')">
-      ✅ Approved
+      Approved
     </button>
     <button 
       class="btn-pill" 
       [class.active]="selectedStatus() === 'SUSPENDED'" 
       (click)="filterByStatus('SUSPENDED')">
-      🚫 Suspended
+      Suspended
     </button>
     <button 
       class="btn-pill" 
       [class.active]="selectedStatus() === 'REJECTED'" 
       (click)="filterByStatus('REJECTED')">
-      ❌ Rejected
+      Rejected
     </button>
   </div>
 
@@ -61,7 +61,7 @@
             <div class="driver-card-header">
               <div class="driver-info-main">
                 <h3 class="driver-name">{{ driver.fullName }}</h3>
-                <span class="driver-phone">📞 {{ driver.phone }}</span>
+                <span class="driver-phone">Phone: {{ driver.phone }}</span>
               </div>
               <div class="driver-badges">
                 <span class="status-badge" [attr.data-status]="driver.approvalStatus">{{ driver.approvalStatus }}</span>
@@ -75,6 +75,10 @@
               <div class="details-section">
                 <span class="detail-label">License Number</span>
                 <span class="detail-value license">{{ driver.licenseNumber }}</span>
+              </div>
+              <div class="details-section">
+                <span class="detail-label">AI Status</span>
+                <span class="detail-value ai-status-text" [attr.data-ai-status]="driver.verificationStatus">{{ driver.verificationStatus }}</span>
               </div>
               <div class="details-section">
                 <span class="detail-label">Cancellation Count</span>
@@ -185,10 +189,10 @@
     <div class="modal-body profile-details-body">
       <!-- Profile Header Summary -->
       <div class="profile-header-card">
-        <div class="avatar-circle">🚚</div>
+        <div class="avatar-circle">D</div>
         <div class="profile-name-info">
           <h2 class="profile-fullname">{{ detail.fullName }}</h2>
-          <span class="profile-phone">📞 {{ detail.phone }}</span>
+          <span class="profile-phone">Phone: {{ detail.phone }}</span>
         </div>
       </div>
 
@@ -238,6 +242,118 @@
           </div>
         }
       </div>
+
+      <!-- Uploaded License Document Viewer -->
+      @if (detail.licenseFileUrl) {
+        <div class="vehicles-panel-section document-viewer-section" style="margin-top: 24px;">
+          <h4 class="section-sub-title">Uploaded License Document</h4>
+          <div class="img-preview-box">
+            @if (detail.licenseFileUrl.endsWith('.pdf')) {
+              <a [href]="getLicenseImageUrl(detail.licenseFileUrl)" target="_blank" class="btn-pdf-link">Open PDF Document</a>
+            } @else {
+              <img [src]="getLicenseImageUrl(detail.licenseFileUrl)" alt="License Card" class="license-img-preview" />
+            }
+          </div>
+        </div>
+      }
+
+      <!-- AI License Verification Report Section -->
+      <div class="ai-report-section">
+        <h4 class="section-sub-title">AI Document Verification</h4>
+        
+        <div class="ai-badge-row">
+          <span class="ai-badge" [attr.data-ai-status]="detail.verificationStatus">
+            AI Status: {{ detail.verificationStatus }}
+          </span>
+        </div>
+
+        @if (detail.verificationStatus === 'NOT_STARTED') {
+          <div class="ai-empty-banner">
+            <span>No verification report available. AI check is not started yet.</span>
+          </div>
+        }
+        @else if (detail.verificationStatus === 'PENDING') {
+          <div class="ai-pending-banner">
+            <span>AI check is currently processing the uploaded document...</span>
+          </div>
+        }
+        @else if (detail.verificationStatus === 'AGENT_FAILED') {
+          <div class="ai-failed-banner" style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 16px; border-radius: 6px; margin-top: 12px;">
+            <span style="color: #EF4444; font-weight: 600;">AI check failed to run. Falling back to manual comparison and approval.</span>
+            @if (detail.verificationReport) {
+              <p class="ai-failed-reason" style="margin-top: 8px; color: #A3A3A3; font-size: 13px; margin-bottom: 0;">{{ detail.verificationReport }}</p>
+            }
+          </div>
+        }
+        @else if (parseReport(detail.verificationReport); as report) {
+          <div class="ai-report-content">
+            <div class="ai-grid">
+              <div class="ai-table-wrapper">
+                <table class="ai-table">
+                  <thead>
+                    <tr>
+                      <th>Attribute</th>
+                      <th>Form Input</th>
+                      <th>Extracted Card</th>
+                      <th>Official Registry</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>Full Name</strong></td>
+                      <td>{{ report.form_data?.name }}</td>
+                      <td>{{ report.extracted_data?.name }}</td>
+                      <td>{{ report.registry_data?.FullName || 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>License Number</strong></td>
+                      <td>{{ report.form_data?.license_number }}</td>
+                      <td>{{ report.extracted_data?.license_number }}</td>
+                      <td>{{ report.registry_data?.LicenseNumber || 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Expiry Date</strong></td>
+                      <td>-</td>
+                      <td>{{ report.extracted_data?.expiry_date }}</td>
+                      <td>{{ report.registry_data?.ExpiryDate || 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Classes</strong></td>
+                      <td>-</td>
+                      <td>{{ report.extracted_data?.classes?.join(', ') }}</td>
+                      <td>{{ report.registry_data?.Classes?.join(', ') || 'N/A' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Allowed Vehicle Types computed by AI -->
+            @if (detail.allowedVehicleTypes && detail.allowedVehicleTypes.length > 0) {
+              <div class="ai-allowed-vehicles">
+                <span class="p-lbl">Allowed Vehicles (Based on Class Eligibility)</span>
+                <div class="allowed-chips">
+                  @for (type of detail.allowedVehicleTypes; track type) {
+                    <span class="vehicle-chip">{{ type }}</span>
+                  }
+                </div>
+              </div>
+            }
+
+            @if (report.checks?.flags && report.checks.flags.length > 0) {
+              <div class="ai-flags-box">
+                <span class="flags-header">Flagged Discrepancies:</span>
+                <ul>
+                  @for (flag of report.checks.flags; track flag) {
+                    <li class="flag-item">{{ flag }}</li>
+                  }
+                </ul>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
     </div>
     
     <div class="modal-footer">

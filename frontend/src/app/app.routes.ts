@@ -7,6 +7,7 @@ import { DriverJobsComponent } from './components/driver/jobs/jobs';
 import { DriverActiveComponent } from './components/driver/active/active';
 import { DriverVehiclesComponent } from './components/driver/vehicles/vehicles';
 import { DriverStatusComponent } from './components/driver/status/status';
+import { DriverRidesComponent } from './components/driver/rides/rides';
 import { AdminDashboardComponent } from './components/admin/dashboard/dashboard';
 import { AdminDriversComponent } from './components/admin/drivers/drivers';
 import { AdminDisputesComponent } from './components/admin/disputes/disputes';
@@ -27,6 +28,7 @@ export const routes: Routes = [
   { path: 'driver/jobs', component: DriverJobsComponent, canActivate: [driverGuard] },
   { path: 'driver/active', component: DriverActiveComponent, canActivate: [driverGuard] },
   { path: 'driver/vehicles', component: DriverVehiclesComponent, canActivate: [driverGuard] },
+  { path: 'driver/rides', component: DriverRidesComponent, canActivate: [driverGuard] },
   { path: 'driver/status', component: DriverStatusComponent, canActivate: [driverGuard] },
   { path: 'admin/dashboard', component: AdminDashboardComponent, canActivate: [adminGuard] },
   { path: 'admin/drivers', component: AdminDriversComponent, canActivate: [adminGuard] },

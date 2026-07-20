@@ -33,6 +33,14 @@ export class SessionService {
     );
   }
 
+  refreshProfile(): Observable<UserProfileDto> {
+    return this.authApi.getProfile().pipe(
+      tap(profile => {
+        this.profileSignal.set(profile);
+      })
+    );
+  }
+
   resolveSession(): Observable<UserProfileDto | null> {
     const cached = this.profileSignal();
     if (cached) {

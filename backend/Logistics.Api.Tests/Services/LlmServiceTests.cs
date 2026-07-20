@@ -25,9 +25,9 @@ public class LlmServiceTests
     {
         var inMemorySettings = new Dictionary<string, string?>
         {
-            { "LlmSettings:Url", "https://api.groq.com/openai/v1/chat/completions" },
-            { "LlmSettings:Model", "llama-3.3-70b-versatile" },
-            { "LlmSettings:ApiKey", "mock_groq_api_key_123" }
+            { "LlmSettings:Url", "https://proxy.llm-gateway.ready.presidio.com/v1/messages" },
+            { "LlmSettings:Model", "claude-sonnet-4-6" },
+            { "LlmSettings:ApiKey", "mock_anthropic_api_key_123" }
         };
 
         var config = new ConfigurationBuilder()
@@ -139,15 +139,12 @@ public class LlmServiceTests
                 
                 var outerResponse = new
                 {
-                    choices = new[]
+                    content = new[]
                     {
                         new
                         {
-                            message = new
-                            {
-                                role = "assistant",
-                                content = innerContentJson
-                            }
+                            type = "text",
+                            text = innerContentJson
                         }
                     }
                 };

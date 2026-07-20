@@ -30,4 +30,12 @@ export class DriverApiService {
   activateVehicle(id: string): Observable<SetActiveVehicleResponse> {
     return this.http.post<SetActiveVehicleResponse>(`${this.baseUrl}/api/drivers/vehicles/${id}/set-active`, {});
   }
+
+  getAllowedVehicles(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.baseUrl}/api/drivers/me/allowed-vehicles`);
+  }
+
+  updateProfile(formData: FormData): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/api/drivers/profile`, formData);
+  }
 }

@@ -13,6 +13,7 @@ A customer has written a special note for their delivery. Analyze the note and r
 
 Rules:
 - Return ONLY valid JSON. No explanation, no markdown, no extra text.
+- Do NOT wrap the JSON output in markdown backticks or code blocks (such as ```json ... ```).
 - If the note is empty or irrelevant, return risk: false, severity: "NONE", all others null, driver_instruction as empty string.
 - Never make up information not present in the note.
 

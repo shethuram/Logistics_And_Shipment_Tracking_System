@@ -3,6 +3,7 @@ using Logistics.Api.Interfaces.Services;
 using Logistics.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 
 namespace Logistics.Api.Controllers;
 
@@ -12,10 +13,12 @@ namespace Logistics.Api.Controllers;
 public class AdminDriversController : ControllerBase
 {
     private readonly IAdminDriverService _adminDriverService;
+    private readonly IConfiguration _configuration;
 
-    public AdminDriversController(IAdminDriverService adminDriverService)
+    public AdminDriversController(IAdminDriverService adminDriverService, IConfiguration configuration)
     {
         _adminDriverService = adminDriverService;
+        _configuration = configuration;
     }
 
     [HttpGet("pending")]
@@ -59,5 +62,26 @@ public class AdminDriversController : ControllerBase
         var result = await _adminDriverService.GetDriverByIdAsync(id);
         if (result == null) return NotFound();
         return Ok(result);
+    }
+
+    [HttpPatch("{id:guid}/verification")]
+    [AllowAnonymous]
+    public async Task<IActionResult> UpdateVerification(Guid id, [FromBody] UpdateDriverVerificationRequest request)
+    {
+        var authHeader = Request.Headers["Authorization"].ToString();
+        var expectedKey = _configuration["AgentSettings:ApiKey"];
+
+        if (string.IsNullOrEmpty(expectedKey))
+        {
+            return StatusCode(500, "API key configuration is missing on the server.");
+        }
+
+        if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer ") || authHeader.Substring(7) != expectedKey)
+        {
+            return Unauthorized("Invalid shared secret authorization token.");
+        }
+
+        await _adminDriverService.UpdateDriverVerificationAsync(id, request);
+        return Ok();
     }
 }

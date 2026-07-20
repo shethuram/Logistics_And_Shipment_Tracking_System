@@ -20,6 +20,8 @@ export interface DriverDetailsDto {
   approvalReason: string | null;
   operationalStatus?: OperationalStatus;
   activeVehicleId?: string | null;
+  verificationStatus: string;
+  licenseNumber: string;
 }
 
 export interface UserProfileDto {
@@ -28,6 +30,7 @@ export interface UserProfileDto {
   userId?: string;
   fullName?: string;
   email?: string;
+  phone?: string;
   role?: 'CUSTOMER' | 'DRIVER' | 'ADMIN';
   driver?: DriverDetailsDto;
 }

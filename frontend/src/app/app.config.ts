@@ -24,7 +24,7 @@ export const appConfig: ApplicationConfig = {
       httpInterceptor: {
         allowedList: [
           {
-            uri: `${environment.apiBaseUrl}/api/auth/*`,
+            uri: `${environment.apiBaseUrl}/api/auth*`,
             tokenOptions: {
               authorizationParams: {
                 audience: environment.auth0.audience,
@@ -33,7 +33,7 @@ export const appConfig: ApplicationConfig = {
             }
           },
           {
-            uri: `${environment.apiBaseUrl}/api/shipments/*`,
+            uri: `${environment.apiBaseUrl}/api/shipments*`,
             tokenOptions: {
               authorizationParams: {
                 audience: environment.auth0.audience,
@@ -42,7 +42,7 @@ export const appConfig: ApplicationConfig = {
             }
           },
           {
-            uri: `${environment.apiBaseUrl}/api/drivers/*`,
+            uri: `${environment.apiBaseUrl}/api/drivers*`,
             tokenOptions: {
               authorizationParams: {
                 audience: environment.auth0.audience,
@@ -51,7 +51,7 @@ export const appConfig: ApplicationConfig = {
             }
           },
           {
-            uri: `${environment.apiBaseUrl}/api/payments/*`,
+            uri: `${environment.apiBaseUrl}/api/payments*`,
             tokenOptions: {
               authorizationParams: {
                 audience: environment.auth0.audience,
@@ -60,7 +60,7 @@ export const appConfig: ApplicationConfig = {
             }
           },
           {
-            uri: `${environment.apiBaseUrl}/api/notifications/*`,
+            uri: `${environment.apiBaseUrl}/api/notifications*`,
             tokenOptions: {
               authorizationParams: {
                 audience: environment.auth0.audience,
@@ -69,7 +69,7 @@ export const appConfig: ApplicationConfig = {
             }
           },
           {
-            uri: `${environment.apiBaseUrl}/api/disputes/*`,
+            uri: `${environment.apiBaseUrl}/api/disputes*`,
             tokenOptions: {
               authorizationParams: {
                 audience: environment.auth0.audience,
@@ -78,7 +78,7 @@ export const appConfig: ApplicationConfig = {
             }
           },
           {
-            uri: `${environment.apiBaseUrl}/api/admin/*`,
+            uri: `${environment.apiBaseUrl}/api/admin*`,
             tokenOptions: {
               authorizationParams: {
                 audience: environment.auth0.audience,
@@ -87,7 +87,7 @@ export const appConfig: ApplicationConfig = {
             }
           },
           {
-            uri: `${environment.apiBaseUrl}/api/tracking/*`,
+            uri: `${environment.apiBaseUrl}/api/tracking*`,
             tokenOptions: {
               authorizationParams: {
                 audience: environment.auth0.audience,

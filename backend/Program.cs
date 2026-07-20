@@ -128,6 +128,18 @@ builder.Services.AddScoped<IEmailTemplateService, EmailTemplateService>();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.ExecuteSqlRaw(@"
+        ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_file_url TEXT;
+        ALTER TABLE drivers ADD COLUMN IF NOT EXISTS verification_status VARCHAR(30) DEFAULT 'NOT_STARTED';
+        ALTER TABLE drivers ADD COLUMN IF NOT EXISTS verification_report TEXT;
+        ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_classes TEXT[];
+        ALTER TABLE drivers ADD COLUMN IF NOT EXISTS allowed_vehicle_types TEXT[];
+    ");
+}
+
 #region Pipeline
 app.UseExceptionHandling();
 app.UseSerilogRequestLogging();
@@ -138,6 +150,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseStaticFiles();
 app.UseCors("AllowAngular");
 app.UseIpRateLimiting();
 app.UseAuthentication();

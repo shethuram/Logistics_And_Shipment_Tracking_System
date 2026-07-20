@@ -1,9 +1,11 @@
-import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { AdminApiService } from '../../../services/admin';
 import { AdminDriverDto } from '../../../dtos/admin.dto';
 import { DriverApprovalStatus } from '../../../models/enums';
+import { SignalrService } from '../../../services/signalr.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-admin-drivers',
@@ -13,9 +15,12 @@ import { DriverApprovalStatus } from '../../../models/enums';
   styleUrl: './drivers.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AdminDriversComponent implements OnInit {
+export class AdminDriversComponent implements OnInit, OnDestroy {
   private adminApi = inject(AdminApiService);
   private fb = inject(FormBuilder);
+  private signalrService = inject(SignalrService);
+
+  private signalrSub!: Subscription;
 
   drivers = signal<AdminDriverDto[]>([]);
   selectedStatus = signal<DriverApprovalStatus | undefined>(undefined);
@@ -26,7 +31,6 @@ export class AdminDriversComponent implements OnInit {
   isLoading = signal<boolean>(true);
   errorMessage = signal<string | null>(null);
 
-  // Driver rejection/suspension state
   actionType = signal<'REJECT' | 'SUSPEND' | null>(null);
   selectedDriverId = signal<string | null>(null);
   showActionModal = signal<boolean>(false);
@@ -34,7 +38,6 @@ export class AdminDriversComponent implements OnInit {
   actionError = signal<string | null>(null);
   isSubmitting = signal<boolean>(false);
 
-  // Detail Modal State
   selectedDriverDetail = signal<AdminDriverDto | null>(null);
   showDetailModal = signal<boolean>(false);
 
@@ -43,6 +46,34 @@ export class AdminDriversComponent implements OnInit {
       reason: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(500)]]
     });
     this.loadDrivers();
+
+    this.signalrSub = this.signalrService.adminAlert$.subscribe({
+      next: (alert) => {
+        const type = alert.type || alert.Type;
+        if (type === 'DRIVER_VERIFICATION_UPDATE' || type === 'NEW_DRIVER_REGISTRATION') {
+          this.loadDrivers();
+          
+          if (type === 'DRIVER_VERIFICATION_UPDATE') {
+            const data = alert.data || alert.Data;
+            const driverId = data?.driverId || data?.DriverId;
+            const currentDetail = this.selectedDriverDetail();
+            if (driverId && currentDetail && currentDetail.id === driverId) {
+              this.adminApi.getDriverById(driverId).subscribe({
+                next: (res) => {
+                  this.selectedDriverDetail.set(res);
+                }
+              });
+            }
+          }
+        }
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.signalrSub) {
+      this.signalrSub.unsubscribe();
+    }
   }
 
   loadDrivers() {
@@ -158,5 +189,20 @@ export class AdminDriversComponent implements OnInit {
       this.currentPage.update(p => p - 1);
       this.loadDrivers();
     }
+  }
+
+  parseReport(reportJson: string | null | undefined): any {
+    if (!reportJson) return null;
+    try {
+      return JSON.parse(reportJson);
+    } catch {
+      return null;
+    }
+  }
+
+  getLicenseImageUrl(url: string | null | undefined): string {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `http://localhost:5286${url}`;
   }
 }

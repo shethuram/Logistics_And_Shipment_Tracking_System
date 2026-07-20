@@ -113,6 +113,14 @@ public class ShipmentsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("driver/history")]
+    [Authorize(Roles = "DRIVER")]
+    public async Task<IActionResult> GetDriverHistory()
+    {
+        var result = await _shipmentService.GetDriverHistoryAsync(_currentUser.Id);
+        return Ok(result);
+    }
+
     [HttpPost("{id:guid}/claim")]
     [Authorize(Roles = "DRIVER")]
     public async Task<IActionResult> Claim(Guid id)

@@ -20,7 +20,7 @@
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="kpi-card-header">
-            <span class="kpi-icon">📦</span>
+            <svg class="kpi-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px; color: #A3A3A3; display: inline-block; vertical-align: middle;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
             <span class="kpi-title">Total Shipments</span>
           </div>
           <div class="kpi-value">{{ m.totalShipments }}</div>
@@ -28,7 +28,7 @@
 
         <div class="kpi-card">
           <div class="kpi-card-header">
-            <span class="kpi-icon">🚚</span>
+            <svg class="kpi-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px; color: #A3A3A3; display: inline-block; vertical-align: middle;"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
             <span class="kpi-title">Drivers Active</span>
           </div>
           <div class="kpi-value">{{ m.driversOnline }}</div>
@@ -36,7 +36,7 @@
 
         <div class="kpi-card warning">
           <div class="kpi-card-header">
-            <span class="kpi-icon">⏳</span>
+            <svg class="kpi-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px; color: #E8A845; display: inline-block; vertical-align: middle;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
             <span class="kpi-title">Stale Shipments</span>
           </div>
           <div class="kpi-value">{{ m.staleShipments }}</div>
@@ -44,7 +44,7 @@
 
         <div class="kpi-card danger">
           <div class="kpi-card-header">
-            <span class="kpi-icon">🚨</span>
+            <svg class="kpi-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px; color: #EF4444; display: inline-block; vertical-align: middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
             <span class="kpi-title">High Cancel Risks</span>
           </div>
           <div class="kpi-value">{{ m.driversWithHighCancelCount }}</div>
@@ -57,7 +57,7 @@
       <div class="kpi-grid financial-grid">
         <div class="kpi-card financial-card">
           <div class="kpi-card-header">
-            <span class="kpi-icon">💰</span>
+            <svg class="kpi-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px; color: #10B981; display: inline-block; vertical-align: middle;"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
             <span class="kpi-title">Gross Revenue (GMV)</span>
           </div>
           <div class="kpi-value financial-value">₹{{ m.totalRevenue | number:'1.2-2' }}</div>
@@ -65,7 +65,7 @@
 
         <div class="kpi-card financial-card">
           <div class="kpi-card-header">
-            <span class="kpi-icon">💸</span>
+            <svg class="kpi-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px; color: #A3A3A3; display: inline-block; vertical-align: middle;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
             <span class="kpi-title">Driver Payouts</span>
           </div>
           <div class="kpi-value financial-value">₹{{ m.totalDriverEarnings | number:'1.2-2' }}</div>
@@ -73,7 +73,7 @@
 
         <div class="kpi-card financial-card">
           <div class="kpi-card-header">
-            <span class="kpi-icon">🛡️</span>
+            <svg class="kpi-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px; color: #E8A845; display: inline-block; vertical-align: middle;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
             <span class="kpi-title">Net Platform Fees</span>
           </div>
           <div class="kpi-value financial-value highlight">₹{{ m.totalPlatformFees | number:'1.2-2' }}</div>
@@ -81,7 +81,7 @@
 
         <div class="kpi-card financial-card">
           <div class="kpi-card-header">
-            <span class="kpi-icon">🏛️</span>
+            <svg class="kpi-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px; color: #A3A3A3; display: inline-block; vertical-align: middle;"><path d="M4 22V4c0-.5.2-1 .6-1.4C5 2.2 5.5 2 6 2h12c.5 0 1 .2 1.4.6.4.4.6.9.6 1.4v18"></path><path d="M10 22V18H14V22"></path></svg>
             <span class="kpi-title">Taxes (GST) Collected</span>
           </div>
           <div class="kpi-value financial-value">₹{{ m.totalTaxCollected | number:'1.2-2' }}</div>

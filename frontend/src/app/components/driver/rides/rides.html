@@ -1,0 +1,93 @@
+<div class="rides-container">
+  <div class="main-rides">
+    
+    <div class="header-row">
+      <h1 class="header-title">My Rides</h1>
+      <button class="btn-matte" (click)="loadHistory()">Refresh</button>
+    </div>
+
+    @if (errorMessage()) {
+      <div class="alert-box">
+        {{ errorMessage() }}
+      </div>
+    }
+
+    <!-- Metrics Summary Cards -->
+    <div class="metrics-grid">
+      <div class="metric-card gold">
+        <span class="metric-label">Total Earnings</span>
+        <span class="metric-val">₹{{ totalEarnings() | number:'1.2-2' }}</span>
+      </div>
+
+      <div class="metric-card">
+        <span class="metric-label">Deliveries</span>
+        <span class="metric-val">{{ totalDeliveries() }}</span>
+      </div>
+
+      <div class="metric-card">
+        <span class="metric-label">Active Jobs</span>
+        <span class="metric-val">{{ activeDeliveriesCount() }}</span>
+      </div>
+
+      <div class="metric-card">
+        <span class="metric-label">Cancelled/Failed</span>
+        <span class="metric-val">{{ cancelledCount() }}</span>
+      </div>
+    </div>
+
+    <!-- Rides List -->
+    <div class="rides-list-wrapper">
+      @if (isLoading()) {
+        <div class="loading-state">
+          <div class="spinner-dot"></div>
+          <p>Loading your rides history...</p>
+        </div>
+      } @else if (rides().length === 0) {
+        <div class="content-placeholder">
+          <p>You haven't claimed any shipments yet.</p>
+          <button class="btn-matte" (click)="browseJobs()">Find Shipments</button>
+        </div>
+      } @else {
+        <div class="table-container">
+          <table class="rides-table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Status</th>
+                <th>Pickup Address</th>
+                <th>Dropoff Address</th>
+                <th>Earnings</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (ride of rides(); track ride.id) {
+                <tr [class]="ride.status.toLowerCase()">
+                  <td>
+                    <span class="order-link">{{ ride.orderId }}</span>
+                  </td>
+                  <td>
+                    <span class="badge" [attr.data-status]="ride.status">
+                      {{ ride.status }}
+                    </span>
+                  </td>
+                  <td class="address-col" [title]="ride.pickupAddress">{{ ride.pickupAddress }}</td>
+                  <td class="address-col" [title]="ride.dropAddress">{{ ride.dropAddress }}</td>
+                  <td class="earnings-col">
+                    @if (ride.status === 'DELIVERED') {
+                      <span class="earnings-plus">₹{{ ride.driverEarnings | number:'1.2-2' }}</span>
+                    } @else {
+                      <span class="earnings-none">-</span>
+                    }
+                  </td>
+                  <td>{{ ride.createdAt | date:'shortDate' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+  </div>
+</div>

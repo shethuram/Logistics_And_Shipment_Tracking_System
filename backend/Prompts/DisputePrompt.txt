@@ -12,6 +12,7 @@ A customer has raised a complaint about their delivery. Analyze the complaint an
 
 Rules:
 - Return ONLY valid JSON. No explanation, no markdown, no extra text.
+- Do NOT wrap the JSON output in markdown backticks or code blocks (such as ```json ... ```).
 - Choose the single most relevant type — do not combine types.
 - If the complaint is unclear, default type to "WRONG_ADDRESS".
 - suggested_resolution must be a concrete action, not a vague statement.

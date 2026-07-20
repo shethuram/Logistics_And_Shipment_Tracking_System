@@ -50,6 +50,11 @@ public static class DriverMappings
         OperationalStatus = driver.OperationalStatus,
         Vehicles = driver.Vehicles?.Select(v => v.ToPendingDriverVehicleDto()).ToList() ?? new List<PendingDriverVehicleDto>(),
         CancelCount = driver.CancelCount,
-        CreatedAt = driver.CreatedAt
+        CreatedAt = driver.CreatedAt,
+        LicenseFileUrl = driver.LicenseFileUrl,
+        VerificationStatus = driver.VerificationStatus,
+        VerificationReport = driver.VerificationReport,
+        LicenseClasses = driver.LicenseClasses,
+        AllowedVehicleTypes = driver.AllowedVehicleTypes
     };
 }

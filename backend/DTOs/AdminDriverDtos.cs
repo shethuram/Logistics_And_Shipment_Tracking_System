@@ -66,4 +66,18 @@ public record AdminDriverDto
     public IReadOnlyList<PendingDriverVehicleDto> Vehicles { get; init; } = Array.Empty<PendingDriverVehicleDto>();
     public int CancelCount { get; init; }
     public DateTime CreatedAt { get; init; }
+
+    public string? LicenseFileUrl { get; init; }
+    public VerificationStatus VerificationStatus { get; init; }
+    public string? VerificationReport { get; init; }
+    public string[]? LicenseClasses { get; init; }
+    public string[]? AllowedVehicleTypes { get; init; }
+}
+
+public record UpdateDriverVerificationRequest
+{
+    public VerificationStatus VerificationStatus { get; init; }
+    public string? VerificationReport { get; init; }
+    public string[]? LicenseClasses { get; init; }
+    public string[]? AllowedVehicleTypes { get; init; }
 }
