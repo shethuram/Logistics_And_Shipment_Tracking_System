@@ -31,7 +31,7 @@ jobs:
       - name: Archive production artifacts
         run: |
           cd backend-agent
-          zip -r ../agent-deploy.zip . -x "venv/*" "__pycache__/*" "*.pyc"
+          zip -q -r ../agent-deploy.zip . -x "venv/*" "*.pyc" "*.pyo" "*/__pycache__/*"
 
       - name: Deploy to Azure WebApp (Python)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
