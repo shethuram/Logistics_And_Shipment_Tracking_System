@@ -59,7 +59,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
             "http://localhost:4200",
-            "https://gray-forest-043913600.7.azurestaticapps.net"
+            "https://gray-forest-043913600.7.azurestaticapps.net",
+            "https://logistics-agent-shethu-gngxe7hngueub7eg.southindia-01.azurewebsites.net"
         )
               .AllowAnyHeader()
               .AllowAnyMethod()
