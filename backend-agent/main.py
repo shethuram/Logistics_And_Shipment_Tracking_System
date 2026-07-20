@@ -1,8 +1,14 @@
 import os
+import sys
+
+# Ensure bundled site-packages are in sys.path for Azure App Service
+site_packages = os.path.join(os.path.dirname(__file__), ".python_packages", "lib", "site-packages")
+if os.path.exists(site_packages) and site_packages not in sys.path:
+    sys.path.insert(0, site_packages)
+
 import json
 import asyncio
 import threading
-import sys
 from flask import Flask, request, jsonify
 from agents.verification_agent import run_verification
 
