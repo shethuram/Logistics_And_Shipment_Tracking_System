@@ -1,0 +1,42 @@
+name: Python AI Agent CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend-agent/**'
+      - '.github/workflows/agent-ci-cd.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend-agent/**'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend-agent/requirements.txt
+
+      - name: Archive production artifacts
+        run: |
+          cd backend-agent
+          zip -r ../agent-deploy.zip . -x "venv/*" "__pycache__/*" "*.pyc"
+
+      - name: Deploy to Azure WebApp (Python)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'logistics-agent-shethu'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_AGENT }}
+          package: ./agent-deploy.zip

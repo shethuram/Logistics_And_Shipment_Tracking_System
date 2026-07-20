@@ -40,6 +40,14 @@ public class PaymentsController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("config")]
+    [AllowAnonymous]
+    public IActionResult GetConfig([FromServices] IConfiguration config)
+    {
+        var keyId = config["Razorpay:KeyId"] ?? string.Empty;
+        return Ok(new { razorpayKeyId = keyId });
+    }
+
     [HttpPost("/api/webhooks/payment")]
     [AllowAnonymous]
     public async Task<IActionResult> Webhook()
