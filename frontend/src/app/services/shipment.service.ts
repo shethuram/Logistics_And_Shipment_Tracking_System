@@ -78,4 +78,8 @@ export class ShipmentApiService {
   markPickupFailed(id: string, reason: string): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/api/shipments/${id}/pickup-failed`, { reason });
   }
+
+  getDriverHistory(): Observable<ShipmentResponse[]> {
+    return this.http.get<ShipmentResponse[]>(`${this.baseUrl}/api/shipments/driver/history`);
+  }
 }

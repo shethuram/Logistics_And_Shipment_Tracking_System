@@ -28,12 +28,27 @@ export class CompleteProfileComponent implements OnInit {
   email = '';
   errorMessage = signal<string | null>(null);
   isLoading = signal(false);
+  fileError = signal<string | null>(null);
+  selectedFile: File | null = null;
 
   profileForm = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
     phone: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
     licenseNumber: ['', [Validators.pattern(/^[A-Z]{2}\d{2} \d{11}$/)]]
   });
+
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        this.fileError.set('File size must be less than 5MB.');
+        this.selectedFile = null;
+      } else {
+        this.fileError.set(null);
+        this.selectedFile = file;
+      }
+    }
+  }
 
   ngOnInit() {
     this.route.queryParams.subscribe(params => {
@@ -69,39 +84,51 @@ export class CompleteProfileComponent implements OnInit {
       return;
     }
 
+    const type = this.userType();
+
+    if (type === 'DRIVER' && !this.selectedFile) {
+      this.fileError.set('License image / PDF is required.');
+      return;
+    }
+
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
     const formValues = this.profileForm.getRawValue();
-    const type = this.userType();
 
-    const request$ = type === 'DRIVER'
-      ? this.authApi.registerDriver({
-          auth0Id: this.auth0Id,
-          fullName: formValues.fullName,
-          email: this.email,
-          phone: formValues.phone,
-          licenseNumber: formValues.licenseNumber
-        } as DriverRegistrationDto)
-      : this.authApi.registerCustomer({
-          auth0Id: this.auth0Id,
-          fullName: formValues.fullName,
-          email: this.email,
-          phone: formValues.phone
-        } as CustomerRegistrationDto);
+    let request$;
+    if (type === 'DRIVER') {
+      const formData = new FormData();
+      formData.append('auth0Id', this.auth0Id);
+      formData.append('fullName', formValues.fullName);
+      formData.append('email', this.email);
+      formData.append('phone', formValues.phone);
+      formData.append('licenseNumber', formValues.licenseNumber || '');
+      formData.append('licenseFile', this.selectedFile!);
+      request$ = this.authApi.registerDriver(formData);
+    } else {
+      request$ = this.authApi.registerCustomer({
+        auth0Id: this.auth0Id,
+        fullName: formValues.fullName,
+        email: this.email,
+        phone: formValues.phone
+      } as CustomerRegistrationDto);
+    }
 
     request$.subscribe({
       next: () => {
-        this.session.clearSession();
-        this.isLoading.set(false);
-        this.navigateToDashboard(type);
+        this.session.refreshProfile().subscribe(() => {
+          this.isLoading.set(false);
+          this.navigateToDashboard(type);
+        });
       },
       error: (err) => {
         this.isLoading.set(false);
         const errorMsg = err.error?.message || '';
         if (err.status === 409 && errorMsg.includes('Auth0 ID')) {
-          this.session.clearSession();
-          this.navigateToDashboard(type);
+          this.session.refreshProfile().subscribe(() => {
+            this.navigateToDashboard(type);
+          });
         } else {
           this.errorMessage.set(errorMsg || 'Failed to save profile. Please try again.');
         }

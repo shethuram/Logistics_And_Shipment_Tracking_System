@@ -1,0 +1,44 @@
+name: Backend API CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci-cd.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore backend/Logistics.Api.csproj
+
+      - name: Build backend
+        run: dotnet build backend/Logistics.Api.csproj --configuration Release --no-restore
+
+      - name: Run unit tests
+        run: dotnet test backend/Logistics.Api.Tests/Logistics.Api.Tests.csproj --no-build --verbosity normal
+
+      - name: Publish .NET app
+        run: dotnet publish backend/Logistics.Api.csproj -c Release -o ${{runner.temp}}/publish
+
+      - name: Deploy to Azure WebApp
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'logistics-api-shethu'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_API }}
+          package: ${{runner.temp}}/publish

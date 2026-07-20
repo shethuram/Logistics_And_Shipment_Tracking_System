@@ -1,7 +1,14 @@
 <div class="status-container">
   @if (session.profile()?.driver; as driver) {
     <div class="status-box">
-      @if (driver.approvalStatus === 'PENDING') {
+      
+      @if (driver.verificationStatus === 'PENDING' && driver.approvalStatus === 'PENDING') {
+        <span class="label">AI VERIFICATION IN PROGRESS</span>
+        <h2 class="title">Analyzing your document</h2>
+        <p class="subtitle">Our AI agent is currently reading and verifying your license against the official registry. This will take a few seconds...</p>
+        <div class="spinner-dot"></div>
+      }
+      @else if (driver.approvalStatus === 'PENDING') {
         <span class="label">DRIVER REGISTRATION</span>
         <h2 class="title">Your application is under review</h2>
         <p class="subtitle">We will notify you once an admin has reviewed your profile.</p>
@@ -16,6 +23,10 @@
         } @else {
           <p class="subtitle">Please check your details and contact support.</p>
         }
+        
+        @if (!showCorrectionForm()) {
+          <button class="btn-correction" (click)="toggleCorrectionForm()">Edit Profile and Re-Submit</button>
+        }
         <button class="btn-logout" (click)="session.logout()">Log Out</button>
       }
 
@@ -28,6 +39,50 @@
           <p class="subtitle">Please contact the administration for more information.</p>
         }
         <button class="btn-logout" (click)="session.logout()">Log Out</button>
+      }
+
+      <!-- Correction Form Section -->
+      @if (showCorrectionForm()) {
+        <div class="correction-form-wrapper">
+          <hr class="divider" />
+          <h3 class="correction-title">Update Your Registration Details</h3>
+          <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="correction-form">
+            <div class="form-group">
+              <label class="input-label">Full Name</label>
+              <input type="text" formControlName="fullName" class="form-control"
+                [class.is-invalid]="profileForm.get('fullName')?.touched && profileForm.get('fullName')?.invalid" />
+            </div>
+
+            <div class="form-group">
+              <label class="input-label">Phone Number</label>
+              <input type="text" formControlName="phone" class="form-control"
+                [class.is-invalid]="profileForm.get('phone')?.touched && profileForm.get('phone')?.invalid" />
+            </div>
+
+            <div class="form-group">
+              <label class="input-label">Driver License Number</label>
+              <input type="text" formControlName="licenseNumber" class="form-control"
+                [class.is-invalid]="profileForm.get('licenseNumber')?.touched && profileForm.get('licenseNumber')?.invalid" />
+            </div>
+
+            <div class="form-group">
+              <label class="input-label">Update License Image / PDF (Optional)</label>
+              <input type="file" (change)="onFileSelected($event)" accept="image/*,application/pdf" class="form-control" />
+              @if (fileError()) {
+                <span class="error-text">{{ fileError() }}</span>
+              }
+            </div>
+
+            <div class="button-group">
+              <button type="submit" class="btn-submit-correction" [disabled]="isLoading()">
+                Re-Submit Profile
+              </button>
+              <button type="button" class="btn-cancel" (click)="toggleCorrectionForm()" [disabled]="isLoading()">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
       }
     </div>
   }

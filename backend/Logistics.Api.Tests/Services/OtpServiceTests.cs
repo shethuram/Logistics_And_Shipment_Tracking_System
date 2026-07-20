@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Logistics.Api.Services;
-using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace Logistics.Api.Tests.Services;
@@ -9,20 +8,10 @@ namespace Logistics.Api.Tests.Services;
 public class OtpServiceTests
 {
     private readonly OtpService _otpService;
-    private const string Secret = "TEST_SECRET_KEY_FOR_DETERMINISTIC_OTP";
 
     public OtpServiceTests()
     {
-        var inMemorySettings = new Dictionary<string, string?>
-        {
-            { "OtpSettings:Secret", Secret }
-        };
-
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(inMemorySettings)
-            .Build();
-
-        _otpService = new OtpService(config);
+        _otpService = new OtpService();
     }
 
     [Fact]

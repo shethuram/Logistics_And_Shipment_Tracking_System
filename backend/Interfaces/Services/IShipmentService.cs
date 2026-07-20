@@ -13,6 +13,7 @@ public interface IShipmentService
     Task<PagedResult<ShipmentResponse>> GetShipmentsAsync(Guid userId, string role, string? search, ShipmentStatus? status, DateTime? dateFrom, DateTime? dateTo, int page, int pageSize);
     Task<IReadOnlyList<AvailableShipmentDto>> GetAvailableShipmentsAsync(Guid driverId);
     Task<ShipmentResponse?> GetActiveShipmentAsync(Guid driverUserId);
+    Task<IReadOnlyList<ShipmentResponse>> GetDriverHistoryAsync(Guid driverUserId);
 
    
     Task<ClaimShipmentResponse> ClaimAsync(Guid id, Guid driverId);

@@ -15,6 +15,15 @@ public enum ApprovalStatus
     SUSPENDED
 }
 
+public enum VerificationStatus
+{
+    NOT_STARTED,
+    PENDING,
+    AI_VERIFIED,
+    AI_FLAGGED,
+    AGENT_FAILED
+}
+
 public enum OperationalStatus
 {
     ONLINE,

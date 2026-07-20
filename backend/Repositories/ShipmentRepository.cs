@@ -122,7 +122,8 @@ public class ShipmentRepository : IShipmentRepository
         return _db.Shipments
             .Include(s => s.Payment)
             .FirstOrDefaultAsync(s => s.DriverId == driverId &&
-                (s.Status == ShipmentStatus.ASSIGNED || s.Status == ShipmentStatus.IN_TRANSIT));
+                (s.Status == ShipmentStatus.ASSIGNED || s.Status == ShipmentStatus.IN_TRANSIT ||
+                 (s.Status == ShipmentStatus.DELIVERED && s.Payment != null && s.Payment.Method == PaymentMethod.COD && !s.CashCollected)));
     }
 
     public Task<Shipment?> GetByPublicTrackParamsAsync(string orderId, string phone)

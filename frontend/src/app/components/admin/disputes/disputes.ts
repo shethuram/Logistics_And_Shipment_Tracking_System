@@ -1,9 +1,11 @@
-import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { AdminApiService } from '../../../services/admin';
 import { DisputeResponse } from '../../../dtos/dispute.dto';
 import { DisputeStatus } from '../../../models/enums';
+import { SignalrService } from '../../../services/signalr.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-admin-disputes',
@@ -13,9 +15,12 @@ import { DisputeStatus } from '../../../models/enums';
   styleUrl: './disputes.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AdminDisputesComponent implements OnInit {
+export class AdminDisputesComponent implements OnInit, OnDestroy {
   private adminApi = inject(AdminApiService);
   private fb = inject(FormBuilder);
+  private signalrService = inject(SignalrService);
+
+  private signalrSub!: Subscription;
 
   disputes = signal<DisputeResponse[]>([]);
   selectedStatus = signal<DisputeStatus | undefined>(undefined);
@@ -37,6 +42,21 @@ export class AdminDisputesComponent implements OnInit {
       resolutionText: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(500)]]
     });
     this.loadDisputes();
+
+    this.signalrSub = this.signalrService.adminAlert$.subscribe({
+      next: (alert) => {
+        const type = alert.type || alert.Type;
+        if (type === 'NEW_DISPUTE') {
+          this.loadDisputes();
+        }
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.signalrSub) {
+      this.signalrSub.unsubscribe();
+    }
   }
 
   loadDisputes() {

@@ -4,12 +4,16 @@ using Logistics.Api.Data;
 using Logistics.Api.DTOs;
 using Logistics.Api.Exceptions;
 using Logistics.Api.Interfaces.Repositories;
+using Logistics.Api.Interfaces.Services;
 using Logistics.Api.Models;
 using Logistics.Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Logistics.Api.Tests.Services;
 
@@ -19,6 +23,7 @@ public class AuthServiceTests : IDisposable
     private readonly AppDbContext _db;
     private readonly Mock<IUserRepository> _userRepoMock;
     private readonly Mock<IDriverRepository> _driverRepoMock;
+    private readonly Mock<IFormFile> _fileMock;
     private readonly AuthService _service;
 
     public AuthServiceTests()
@@ -37,13 +42,21 @@ public class AuthServiceTests : IDisposable
         _userRepoMock = new Mock<IUserRepository>();
         _driverRepoMock = new Mock<IDriverRepository>();
 
+        _fileMock = new Mock<IFormFile>();
+        _fileMock.Setup(f => f.Length).Returns(100);
+        _fileMock.Setup(f => f.FileName).Returns("license.jpg");
+
         _userRepoMock.Setup(r => r.ExistsByEmailAsync(It.IsAny<string>())).ReturnsAsync(false);
         _userRepoMock.Setup(r => r.ExistsByPhoneAsync(It.IsAny<string>())).ReturnsAsync(false);
 
         _service = new AuthService(
             _userRepoMock.Object,
             _driverRepoMock.Object,
-            _db
+            _db,
+            new Mock<IConfiguration>().Object,
+            new Mock<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>().Object,
+            new Mock<INotificationService>().Object,
+            new Mock<ILogger<AuthService>>().Object
         );
     }
 
@@ -91,7 +104,7 @@ public class AuthServiceTests : IDisposable
         _userRepoMock.Setup(r => r.ExistsByAuth0IdAsync(auth0Id)).ReturnsAsync(true);
         var request = new RegisterDriverRequest { Auth0Id = auth0Id, FullName = "Name", Email = "e", Phone = "p", LicenseNumber = "L1" };
 
-        await Assert.ThrowsAsync<ConflictException>(() => _service.RegisterDriverAsync(request));
+        await Assert.ThrowsAsync<ConflictException>(() => _service.RegisterDriverAsync(request, _fileMock.Object));
     }
 
     [Fact]
@@ -108,7 +121,7 @@ public class AuthServiceTests : IDisposable
             LicenseNumber = "TN33 20230012345" 
         };
 
-        var result = await _service.RegisterDriverAsync(request);
+        var result = await _service.RegisterDriverAsync(request, _fileMock.Object);
 
         Assert.NotNull(result);
         Assert.Equal("Driver Name", result.FullName);
@@ -142,7 +155,7 @@ public class AuthServiceTests : IDisposable
 
         _driverRepoMock.Setup(r => r.AddAsync(It.IsAny<Driver>())).ThrowsAsync(new Exception("Database crash"));
 
-        await Assert.ThrowsAsync<Exception>(() => _service.RegisterDriverAsync(request));
+        await Assert.ThrowsAsync<Exception>(() => _service.RegisterDriverAsync(request, _fileMock.Object));
 
         var usersCount = await _db.Users.CountAsync();
         Assert.Equal(0, usersCount);
@@ -175,7 +188,7 @@ public class AuthServiceTests : IDisposable
         _userRepoMock.Setup(r => r.ExistsByEmailAsync(email)).ReturnsAsync(true);
         var request = new RegisterDriverRequest { Auth0Id = "a1", FullName = "Name", Email = email, Phone = "p", LicenseNumber = "TN33 20230012345" };
 
-        await Assert.ThrowsAsync<ConflictException>(() => _service.RegisterDriverAsync(request));
+        await Assert.ThrowsAsync<ConflictException>(() => _service.RegisterDriverAsync(request, _fileMock.Object));
     }
 
     [Fact]
@@ -185,6 +198,6 @@ public class AuthServiceTests : IDisposable
         _userRepoMock.Setup(r => r.ExistsByPhoneAsync(phone)).ReturnsAsync(true);
         var request = new RegisterDriverRequest { Auth0Id = "a1", FullName = "Name", Email = "e", Phone = phone, LicenseNumber = "TN33 20230012345" };
 
-        await Assert.ThrowsAsync<ConflictException>(() => _service.RegisterDriverAsync(request));
+        await Assert.ThrowsAsync<ConflictException>(() => _service.RegisterDriverAsync(request, _fileMock.Object));
     }
 }

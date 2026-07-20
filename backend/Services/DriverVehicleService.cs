@@ -28,7 +28,12 @@ public class DriverVehicleService : IDriverVehicleService
 
     public async Task<AddVehicleResponse> AddVehicleAsync(Guid driverId, AddVehicleRequest request)
     {
-        await EnsureDriverExistsAsync(driverId);
+        var driver = await EnsureDriverExistsAsync(driverId);
+
+        if (driver.AllowedVehicleTypes != null && !driver.AllowedVehicleTypes.Contains(request.VehicleType.ToString()))
+        {
+            throw new BusinessRuleException($"Your driver's license does not permit operating a {request.VehicleType}. Allowed types: {string.Join(", ", driver.AllowedVehicleTypes)}");
+        }
 
         if (await _vehicleRepo.ExistsByNumberForDriverAsync(driverId, request.VehicleNumber))
             throw new ConflictException("A vehicle with this number already exists for this driver.");
@@ -47,10 +52,17 @@ public class DriverVehicleService : IDriverVehicleService
 
     public async Task<VehicleDto> UpdateVehicleAsync(Guid driverId, Guid vehicleId, UpdateVehicleRequest request)
     {
+        var driver = await EnsureDriverExistsAsync(driverId);
         var vehicle = await GetOwnedVehicleAsync(driverId, vehicleId);
 
         if (request.VehicleType is not null)
+        {
+            if (driver.AllowedVehicleTypes != null && !driver.AllowedVehicleTypes.Contains(request.VehicleType.Value.ToString()))
+            {
+                throw new BusinessRuleException($"Your driver's license does not permit operating a {request.VehicleType}. Allowed types: {string.Join(", ", driver.AllowedVehicleTypes)}");
+            }
             vehicle.VehicleType = request.VehicleType.Value;
+        }
 
         if (request.VehicleNumber is not null)
         {
@@ -75,11 +87,12 @@ public class DriverVehicleService : IDriverVehicleService
         return vehicle.ToSetActiveVehicleResponse();
     }
 
-    private async Task EnsureDriverExistsAsync(Guid driverId)
+    private async Task<Driver> EnsureDriverExistsAsync(Guid driverId)
     {
         var driver = await _driverRepo.GetByIdAsync(driverId);
         if (driver is null)
             throw new NotFoundException("Driver not found.");
+        return driver;
     }
 
     private async Task<Vehicle> GetOwnedVehicleAsync(Guid driverId, Guid vehicleId)

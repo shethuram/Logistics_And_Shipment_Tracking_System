@@ -18,6 +18,20 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (!builder.Environment.IsDevelopment())
+{
+    try
+    {
+        var keyVaultName = builder.Configuration["KeyVaultName"] ?? "logistics-kv-shethu";
+        var keyVaultUri = new Uri($"https://{keyVaultName}.vault.azure.net/");
+        builder.Configuration.AddAzureKeyVault(keyVaultUri, new Azure.Identity.DefaultAzureCredential());
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Azure Key Vault initialization warning: {ex.Message}");
+    }
+}
+
 builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
     .ReadFrom.Services(services)
@@ -43,7 +57,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngular", policy =>
     {
-        policy.WithOrigins("http://localhost:4200")
+        policy.WithOrigins("http://localhost:4200", "https://logistics-web-shethu.azurestaticapps.net")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -128,6 +142,18 @@ builder.Services.AddScoped<IEmailTemplateService, EmailTemplateService>();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.ExecuteSqlRaw(@"
+        ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_file_url TEXT;
+        ALTER TABLE drivers ADD COLUMN IF NOT EXISTS verification_status VARCHAR(30) DEFAULT 'NOT_STARTED';
+        ALTER TABLE drivers ADD COLUMN IF NOT EXISTS verification_report TEXT;
+        ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_classes TEXT[];
+        ALTER TABLE drivers ADD COLUMN IF NOT EXISTS allowed_vehicle_types TEXT[];
+    ");
+}
+
 #region Pipeline
 app.UseExceptionHandling();
 app.UseSerilogRequestLogging();
@@ -138,6 +164,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseStaticFiles();
 app.UseCors("AllowAngular");
 app.UseIpRateLimiting();
 app.UseAuthentication();

@@ -224,7 +224,13 @@ public class AdminService : IAdminService
                 shipment.PickupAddress,
                 shipment.DropAddress,
                 PackageType = shipment.PackageType.ToString(),
-                shipment.WeightKg
+                shipment.WeightKg,
+                PreferredWindow = shipment.PreferredWindow.ToString(),
+                DriverInstruction = shipment.DriverInstruction,
+                DriverEarnings = shipment.Payment != null ? shipment.Payment.DriverEarnings : 0m,
+                RiskFlag = shipment.RiskFlag,
+                RiskSeverity = shipment.RiskSeverity.ToString(),
+                RiskReason = shipment.RiskReason
             });
         }
     }

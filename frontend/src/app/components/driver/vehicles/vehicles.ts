@@ -23,6 +23,7 @@ export class DriverVehiclesComponent implements OnInit {
   vehicles = signal<VehicleResponse[]>([]);
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
+  allowedVehicleTypes = signal<string[]>([]);
 
   showNewVehicleModal = signal<boolean>(false);
 
@@ -37,6 +38,23 @@ export class DriverVehiclesComponent implements OnInit {
       this.isOnline.set(profile.driver.operationalStatus === 'ONLINE');
     }
     this.loadVehicles();
+    this.loadAllowedVehicleTypes();
+  }
+
+  loadAllowedVehicleTypes() {
+    this.driverApi.getAllowedVehicles().subscribe({
+      next: (types) => {
+        this.allowedVehicleTypes.set(types);
+        if (types.length > 0) {
+          this.vehicleForm.patchValue({
+            vehicleType: types[0] as VehicleType
+          });
+        }
+      },
+      error: () => {
+        this.allowedVehicleTypes.set(['TWO_WHEELER', 'THREE_WHEELER', 'FOUR_WHEELER', 'HEAVY_VEHICLE']);
+      }
+    });
   }
 
   isBusy(): boolean {

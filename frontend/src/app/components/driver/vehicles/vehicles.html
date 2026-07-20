@@ -17,7 +17,7 @@
           </button>
           @if (isBusy()) {
             <span style="font-size: 11px; color: #F59E0B; font-weight: 500;">
-              ⚠️ Status locked while on active delivery.
+              Warning: Status locked while on active delivery.
             </span>
           }
         </div>
@@ -74,10 +74,14 @@
         <div class="form-group" style="margin-bottom: 16px;">
           <label class="form-label">Vehicle Category</label>
           <select formControlName="vehicleType" class="form-select">
-            <option value="TWO_WHEELER">Two Wheeler (Bike)</option>
-            <option value="THREE_WHEELER">Three Wheeler (Auto)</option>
-            <option value="FOUR_WHEELER">Four Wheeler (Mini-Truck)</option>
-            <option value="HEAVY_VEHICLE">Heavy Vehicle (Lorry)</option>
+            @for (type of allowedVehicleTypes(); track type) {
+              <option [value]="type">
+                {{ type === 'TWO_WHEELER' ? 'Two Wheeler (Bike)' : 
+                   type === 'THREE_WHEELER' ? 'Three Wheeler (Auto)' : 
+                   type === 'FOUR_WHEELER' ? 'Four Wheeler (Mini-Truck)' : 
+                   type === 'HEAVY_VEHICLE' ? 'Heavy Vehicle (Lorry)' : type }}
+              </option>
+            }
           </select>
         </div>
 

@@ -493,11 +493,13 @@
   .map-container {
     height: 350px;
     width: 100%;
+    flex: none;
   }
   .details-panel {
     border-left: none;
     border-top: 1px solid #262626;
     height: auto;
+    flex: none;
   }
 }
 

@@ -7,6 +7,8 @@ using Logistics.Api.Models;
 using Logistics.Api.Services;
 using Moq;
 using Xunit;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Logistics.Api.Tests.Services;
 
@@ -20,7 +22,13 @@ public class DriverServiceTests
     {
         _driverRepoMock = new Mock<IDriverRepository>();
         _vehicleRepoMock = new Mock<IVehicleRepository>();
-        _driverService = new DriverService(_driverRepoMock.Object, _vehicleRepoMock.Object);
+        _driverService = new DriverService(
+            _driverRepoMock.Object, 
+            _vehicleRepoMock.Object,
+            new Mock<IUserRepository>().Object,
+            new Mock<IConfiguration>().Object,
+            new Mock<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>().Object,
+            new Mock<ILogger<DriverService>>().Object);
     }
 
     [Fact]

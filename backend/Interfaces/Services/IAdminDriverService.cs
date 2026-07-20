@@ -11,4 +11,5 @@ public interface IAdminDriverService
     Task<ApproveDriverResponse> ApproveDriverAsync(Guid id);
     Task<DriverApprovalResponse> RejectDriverAsync(Guid id, RejectDriverRequest request);
     Task<DriverApprovalResponse> SuspendDriverAsync(Guid id, SuspendDriverRequest request);
+    Task UpdateDriverVerificationAsync(Guid id, UpdateDriverVerificationRequest request);
 }

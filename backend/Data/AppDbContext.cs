@@ -188,6 +188,7 @@ public class AppDbContext : DbContext
         b.Entity<User>().Property(x => x.Role).HasConversion<string>();
         b.Entity<Driver>().Property(x => x.ApprovalStatus).HasConversion<string>();
         b.Entity<Driver>().Property(x => x.OperationalStatus).HasConversion<string>();
+        b.Entity<Driver>().Property(x => x.VerificationStatus).HasConversion<string>();
         b.Entity<Vehicle>().Property(x => x.VehicleType).HasConversion<string>();
         b.Entity<Shipment>().Property(x => x.Status).HasConversion<string>();
         b.Entity<Shipment>().Property(x => x.PackageType).HasConversion<string>();
