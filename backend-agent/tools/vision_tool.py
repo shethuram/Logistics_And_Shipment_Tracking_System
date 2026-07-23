@@ -19,7 +19,7 @@ async def extract_license_data(image_url: str) -> ExtractedLicenseData:
         prompt_content = f.read()
 
     # Initialize client
-    api_key = settings.ANTHROPIC_AUTH_TOKEN or settings.ANTHROPIC_API_KEY
+    api_key = settings.ANTHROPIC_AUTH_TOKEN
     base_url = settings.ANTHROPIC_BASE_URL or None
 
     client_args = {"api_key": api_key}

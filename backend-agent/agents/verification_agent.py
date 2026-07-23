@@ -12,7 +12,7 @@ from anthropic import AsyncAnthropic
 async def run_verification(driver_id: str, image_url: str, form_name: str, form_license_no: str):
     logger.info(f"Starting verification agent execution for Driver ID: {driver_id}")
     
-    api_key = settings.ANTHROPIC_AUTH_TOKEN or settings.ANTHROPIC_API_KEY
+    api_key = settings.ANTHROPIC_AUTH_TOKEN
     base_url = settings.ANTHROPIC_BASE_URL or None
 
     client_args = {"api_key": api_key}

@@ -1,7 +1,6 @@
 import os
 
 class Settings:
-    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
     ANTHROPIC_BASE_URL: str = os.getenv("ANTHROPIC_BASE_URL", "")
     ANTHROPIC_AUTH_TOKEN: str = os.getenv("ANTHROPIC_AUTH_TOKEN", "")
     ANTHROPIC_MODEL: str = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
@@ -20,7 +19,7 @@ class Settings:
                 try:
                     sec = client.get_secret("LlmSettings--ApiKey")
                     if sec and sec.value:
-                        self.ANTHROPIC_API_KEY = sec.value
+                        self.ANTHROPIC_AUTH_TOKEN = sec.value
                 except Exception:
                     pass
                 try:
